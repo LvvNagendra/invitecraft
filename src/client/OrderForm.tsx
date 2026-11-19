@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { BusinessProfile, ClientOrder, EventItem, EventType, Invitation, Lang, Person, ThemeId } from '../types';
 import { EVENTS, THEMES } from '../lib/themes';
 import { BLESSINGS, studioMessages } from '../lib/messages';
-import { compressImage } from '../lib/media';
+import { compressImage, LINK_PORTRAIT } from '../lib/media';
 import { orderCode } from '../lib/business';
 import { plusDays } from '../lib/demos';
 import { displayNames, downloadBlob, fmtDate, fmtTime, slug, uid, waLink } from '../lib/util';
@@ -359,7 +359,7 @@ function PersonCard({ label, p, onChange }: { label: string; p: Person; onChange
         </button>
         <input ref={ref} type="file" accept="image/*" hidden onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange({ photo: await compressImage(f, 220, 0.6) }); // small enough to travel in the WhatsApp message
+          if (f) onChange({ photo: await compressImage(f, LINK_PORTRAIT.size, LINK_PORTRAIT.quality) }); // small enough for the WhatsApp message and the share link
           e.target.value = '';
         }} />
         <div className="flex-1 space-y-2">

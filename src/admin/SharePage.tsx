@@ -11,6 +11,7 @@ import { whatsappMessage } from '../lib/messages';
 import { posterPdf, posterPng } from '../lib/poster';
 import { fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
 import { hostAllPhotos, hostingReady } from '../lib/hosting';
+import { shrinkDataUrl } from '../lib/media';
 import { Experience } from '../guest/Experience';
 import { Badge, Btn, Card, cx, Field, Modal, PageHeader, PhoneFrame, toast } from './ui';
 import { InviteThumb } from './Thumb';
@@ -96,6 +97,11 @@ export function SharePage({ id }: { id: string }) {
             pub={pub}
             hosting={hostingReady(settings)}
             busy={busy === 'host'}
+            onShrink={() => run('host', async () => {
+              const fix = async (p?: string) => (p?.startsWith('data:') ? shrinkDataUrl(p) : p);
+              await saveInvitation({ ...inv, photoInLink: 'all', hostA: { ...inv.hostA, photo: await fix(inv.hostA.photo) }, hostB: inv.hostB && { ...inv.hostB, photo: await fix(inv.hostB.photo) } });
+              toast('Portraits resized — they now fit in the link ✓');
+            })}
             onHost={() => run('host', async () => {
               const next = await hostAllPhotos(inv, settings, (d, t) => toast(`Uploading photos ${d}/${t}…`));
               await saveInvitation(next);
@@ -267,7 +273,7 @@ function GuestList({ inv }: { inv: Invitation }) {
 }
 
 /** Shows whether the invitation's photos are actually inside the share link. */
-function PhotoCheck({ inv, pub, hosting, busy, onHost }: { inv: Invitation; pub: ReturnType<typeof fitPublic>; hosting: boolean; busy: boolean; onHost: () => void }) {
+function PhotoCheck({ inv, pub, hosting, busy, onHost, onShrink }: { inv: Invitation; pub: ReturnType<typeof fitPublic>; hosting: boolean; busy: boolean; onHost: () => void; onShrink: () => void }) {
   const portraits = [inv.hostA.photo, inv.hostB?.photo].filter(Boolean).length;
   const portraitsIn = [pub.hostA.photo, pub.hostB?.photo].filter(Boolean).length;
   const gallery = inv.gallery.length;
@@ -288,7 +294,10 @@ function PhotoCheck({ inv, pub, hosting, busy, onHost }: { inv: Invitation; pub:
               <p><b>Photos guests will see:</b> {portraitsIn}/{portraits} portrait{portraits === 1 ? '' : 's'} · {galleryIn}/{gallery} gallery {missing ? '' : '✓'}</p>
               {missing && switchedOff && <p className="mt-1">Some photos are switched off. Edit → Experience → Photos in the share link → <b>All photos</b>.</p>}
               {missing && !switchedOff && !hosting && (
-                <p className="mt-1">Photos are stored inside the link, and a WhatsApp message can only carry about 2 small photos. <b>Turn on free photo hosting</b> (2 minutes, once) and every photo will be included with a short link.</p>
+                <p className="mt-1">
+                  {portraitsIn < portraits ? <>Your portraits are too large for a WhatsApp-safe link — tap <b>Make photos fit</b>. </> : null}
+                  {galleryIn < gallery ? <>Gallery photos need <b>free photo hosting</b> (2 minutes, once) — then every photo is included with a short link.</> : null}
+                </p>
               )}
               {missing && !switchedOff && hosting && <p className="mt-1">Upload the photos to your photo hosting and every photo will be included.</p>}
             </>
@@ -299,7 +308,8 @@ function PhotoCheck({ inv, pub, hosting, busy, onHost }: { inv: Invitation; pub:
         <div className="mt-3 flex flex-wrap gap-2 pl-8">
           {none || switchedOff ? <Btn size="sm" onClick={() => go(`/edit/${inv.id}`)}>Add / fix photos</Btn> : null}
           {!none && hosting && embedded && <Btn size="sm" variant="primary" disabled={busy} onClick={onHost}>{busy ? 'Uploading…' : 'Upload photos'}</Btn>}
-          {!none && missing && !hosting && <Btn size="sm" variant="primary" onClick={() => go('/settings?hosting')}>Set up photo hosting</Btn>}
+          {!none && !switchedOff && !hosting && portraitsIn < portraits && <Btn size="sm" variant="primary" disabled={busy} onClick={onShrink}>{busy ? 'Resizing…' : 'Make photos fit'}</Btn>}
+          {!none && !switchedOff && !hosting && galleryIn < gallery && <Btn size="sm" onClick={() => go('/settings?hosting')}>Set up photo hosting</Btn>}
         </div>
       )}
     </div>

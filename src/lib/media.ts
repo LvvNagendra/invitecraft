@@ -2,29 +2,46 @@ import type { PublicInvitation } from '../types';
 import { displayNames, eventDate, mapsLink } from './util';
 import { EVENTS } from './themes';
 
-/** Resize + compress an uploaded image to a small JPEG data URL (keeps share links short). */
-export function compressImage(file: File, maxSize = 360, quality = 0.62): Promise<string> {
+function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const c = document.createElement('canvas');
-        c.width = w;
-        c.height = h;
-        const ctx = c.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', quality));
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
   });
+}
+
+function encode(img: HTMLImageElement, maxSize: number, quality: number, small: boolean) {
+  const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.width * scale));
+  c.height = Math.max(1, Math.round(img.height * scale));
+  c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+  if (small) {
+    // WebP is ~15% smaller; Safari can't encode it and returns PNG, so fall back to JPEG
+    const webp = c.toDataURL('image/webp', quality);
+    if (webp.startsWith('data:image/webp')) return webp;
+  }
+  return c.toDataURL('image/jpeg', quality);
+}
+
+/** Resize + compress an uploaded image to a data URL. */
+export async function compressImage(file: File, maxSize = 360, quality = 0.62): Promise<string> {
+  const data = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = reject;
+    r.onload = () => resolve(r.result as string);
+    r.readAsDataURL(file);
+  });
+  return encode(await loadImage(data), maxSize, quality, maxSize <= 200);
+}
+
+/** Portrait size that fits inside a WhatsApp-safe share link (two of them ≈ 14,000 characters). */
+export const LINK_PORTRAIT = { size: 150, quality: 0.5 };
+
+/** Re-compresses an existing data-URL photo (used to make old, large photos fit the link). */
+export async function shrinkDataUrl(dataUrl: string, maxSize = LINK_PORTRAIT.size, quality = LINK_PORTRAIT.quality) {
+  return encode(await loadImage(dataUrl), maxSize, quality, true);
 }
 
 /* ---------------- calendar ---------------- */

@@ -101,7 +101,7 @@ export function baseUrl(settings: Settings) {
  * embedded (data:) gallery photos are dropped from the end until it fits, then embedded portraits.
  * Hosted photo URLs are tiny and always kept.
  */
-export function fitPublic(inv: Invitation, settings?: Settings, budget = WA_LIMIT - 3000): PublicInvitation {
+export function fitPublic(inv: Invitation, settings?: Settings, budget = LINK_BUDGET): PublicInvitation {
   const pub = toPublic(inv, settings);
   const isData = (x?: string) => !!x && x.startsWith('data:');
   const size = () => encodeInvite(pub).length;
@@ -193,8 +193,10 @@ export async function copyText(text: string) {
   }
 }
 
-/** WhatsApp cuts messages at ~65,000 characters. */
+/** WhatsApp cuts messages at ~65,000 characters; very long links also get broken while forwarding. */
 export const WA_LIMIT = 60000;
+/** Share links are kept under this size so they always arrive intact. */
+export const LINK_BUDGET = 16000;
 
 export function kb(n: number) {
   return n < 1024 ? `${n} chars` : `${(n / 1024).toFixed(1)} KB`;

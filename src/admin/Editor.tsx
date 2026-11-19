@@ -4,7 +4,7 @@ import type { EventItem, EventType, Invitation, Lang, Person, ThemeId } from '..
 import { EVENTS, THEMES } from '../lib/themes';
 import { getState, newInvitation, saveInvitation, useStore } from '../lib/store';
 import { go } from '../lib/router';
-import { compressImage } from '../lib/media';
+import { compressImage, LINK_PORTRAIT } from '../lib/media';
 import { BLESSINGS, studioMessages } from '../lib/messages';
 import { encodeInvite, fitPublic, kb, toPublic, uid, WA_LIMIT } from '../lib/util';
 import { hostingReady, uploadPhoto } from '../lib/hosting';
@@ -272,7 +272,7 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
                   </div>
                   {inv.music === 'custom' && <input className="input mt-2" value={inv.musicUrl || ''} onChange={(e) => up({ musicUrl: e.target.value })} placeholder="https://…/song.mp3 (direct MP3 link you have rights to)" />}
                 </Field>
-                <Field label="Couple / host photos inside the share link" hint={hostingReady(settings) ? 'Photo hosting is ON — photos are uploaded and the link stays short.' : 'Without photo hosting, photos travel inside the link and a WhatsApp link can only carry about 2 small photos. Turn on free photo hosting (Settings) for bigger galleries.'}>
+                <Field label="Couple / host photos inside the share link" hint={hostingReady(settings) ? 'Photo hosting is ON — photos are uploaded and the link stays short.' : 'Without photo hosting, photos travel inside the link and only the 2 portraits fit in a WhatsApp-safe link — gallery photos need free photo hosting (Settings). Turn on free photo hosting (Settings) for bigger galleries.'}>
                   <div className="flex flex-wrap gap-2">
                     {([['all', 'All photos'], ['couple', 'Portraits only'], ['none', 'No photos']] as const).map(([m, l]) => (
                       <button key={m} type="button" onClick={() => up({ photoInLink: m })} className={cx('rounded-xl border px-4 py-2 text-sm', inv.photoInLink === m ? 'border-brand-500 bg-brand-50 font-semibold' : 'border-stone-200')}>{l}</button>
@@ -349,7 +349,7 @@ function PersonEditor({ label, p, onChange, parentsHint, settings }: { label: st
 export async function preparePhoto(file: File, settings: Settings, kind: 'portrait' | 'gallery') {
   const hosted = hostingReady(settings);
   const data = kind === 'portrait'
-    ? await compressImage(file, hosted ? 640 : 300, hosted ? 0.82 : 0.6)
+    ? await compressImage(file, hosted ? 640 : LINK_PORTRAIT.size, hosted ? 0.82 : LINK_PORTRAIT.quality)
     : await compressImage(file, hosted ? 1080 : 480, hosted ? 0.78 : 0.5);
   if (!hosted) return data;
   try {

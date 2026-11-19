@@ -48,7 +48,8 @@ function Broken() {
   return (
     <div className="flex h-full flex-col items-center justify-center bg-[#2a0610] p-8 text-center text-[#fff3d6]">
       <p className="font-script text-5xl text-[#f6e27a]">Oops!</p>
-      <p className="mt-4 max-w-xs font-serif text-lg">This invitation link looks incomplete. Please ask the family to share the link again.</p>
+      <p className="mt-4 max-w-xs font-serif text-lg">This invitation link was cut off while it was being shared.</p>
+      <p className="mt-3 max-w-xs font-serif text-base opacity-80">Please ask the family to send the link again — or tap the full link in their WhatsApp message (open “Read more” first).</p>
     </div>
   );
 }
