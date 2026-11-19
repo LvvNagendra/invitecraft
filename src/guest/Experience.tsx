@@ -493,7 +493,7 @@ export function InviteCard() {
             <PersonBlock name={inv.hostA.name} parents={inv.hostA.parents} family={inv.hostA.family} />
             {two && (
               <>
-                <p className="my-2 font-script text-3xl" style={{ color: theme.accent }}>weds</p>
+                <p className="my-2 font-script text-3xl" style={{ color: theme.accent }}>{inv.type === 'wedding' ? 'weds' : '&'}</p>
                 <PersonBlock name={inv.hostB!.name} parents={inv.hostB!.parents} family={inv.hostB!.family} />
               </>
             )}

@@ -213,7 +213,7 @@ export async function renderPoster(inv: PublicInvitation, link?: string): Promis
     y += 95;
     k.fillStyle = theme.accent;
     k.font = "70px 'Great Vibes'";
-    k.fillText('weds', CX, y);
+    k.fillText(inv.type === 'wedding' ? 'weds' : '&', CX, y);
     y += 130;
     k.fillStyle = theme.cardInk;
     k.font = "130px 'Great Vibes'";
