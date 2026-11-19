@@ -1,4 +1,5 @@
-import type { Invitation, Settings } from '../types';
+import type { Invitation, PublicInvitation, Settings } from '../types';
+import { DEFAULT_REPO } from './util';
 
 /**
  * Optional free photo hosting on GitHub.
@@ -68,3 +69,38 @@ export async function hostAllPhotos(inv: Invitation, s: Settings, onProgress?: (
     gallery: await Promise.all(inv.gallery.map(up)) as string[],
   };
 }
+
+/* ---------------- short links ---------------- */
+
+
+function utf8ToBase64(text: string) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** Stores the public invitation as invites/<id>.json on the media branch (creates or updates). */
+export async function publishInvite(id: string, pub: PublicInvitation, s: Settings) {
+  const repo = s.ghRepo!.trim();
+  const url = `https://api.github.com/repos/${repo}/contents/invites/${id}.json`;
+  const existing = await fetch(`${url}?ref=${BRANCH}`, { headers: headers(s) });
+  if (existing.status === 404) await ensureBranch(s).catch(() => {});
+  const sha = existing.ok ? (await existing.json()).sha : undefined;
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: headers(s),
+    body: JSON.stringify({ message: `Publish invitation ${id}`, content: utf8ToBase64(JSON.stringify(pub)), branch: BRANCH, ...(sha ? { sha } : {}) }),
+  });
+  if (!r.ok) throw new Error(r.status === 401 ? 'GitHub token is invalid or expired' : `Publish failed (${r.status})`);
+}
+
+/** Loads a published invitation for the guest page. */
+export async function fetchPublished(id: string, repo = DEFAULT_REPO): Promise<PublicInvitation> {
+  if (!/^[a-z0-9-]{4,64}$/i.test(id) || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('bad link');
+  const r = await fetch(`https://raw.githubusercontent.com/${repo}/${BRANCH}/invites/${id}.json?t=${Date.now()}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('not found');
+  const p = await r.json();
+  return { events: [], gallery: [], rsvpEnabled: false, effects: true, music: 'melody', ...p, hostA: p.hostA || { name: '' } };
+}
+

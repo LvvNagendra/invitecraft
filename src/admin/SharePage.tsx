@@ -2,15 +2,15 @@ import {
   AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Image as ImageIcon, Link2, MessageCircle, Pencil, QrCode, Share, Smartphone, Trash2, UserPlus, Users,
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Guest, Invitation } from '../types';
 import { saveInvitation, useStore } from '../lib/store';
 import { go } from '../lib/router';
 import { EVENTS } from '../lib/themes';
 import { whatsappMessage } from '../lib/messages';
 import { posterPdf, posterPng } from '../lib/poster';
-import { fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
-import { hostAllPhotos, hostingReady } from '../lib/hosting';
+import { inviteSig, isPublished, fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
+import { hostAllPhotos, hostingReady, publishInvite } from '../lib/hosting';
 import { shrinkDataUrl } from '../lib/media';
 import { Experience } from '../guest/Experience';
 import { Badge, Btn, Card, cx, Field, Modal, PageHeader, PhoneFrame, toast } from './ui';
@@ -28,6 +28,31 @@ export function SharePage({ id }: { id: string }) {
   const link = useMemo(() => (inv ? inviteLink(inv, settings) : ''), [inv, settings]);
   const defaultMsg = useMemo(() => (inv ? whatsappMessage(inv, link) : ''), [inv, link]);
   useEffect(() => setMsg(defaultMsg), [defaultMsg]);
+
+  // Short links: publish the invitation to the repository so links are tiny and never cut off
+  const hosting = hostingReady(settings);
+  const published = !!inv && isPublished(inv, settings);
+  const tried = useRef('');
+  const publish = async () => {
+    if (!inv) return;
+    setBusy('publish');
+    try {
+      const next = await hostAllPhotos(inv, settings);
+      await publishInvite(next.id, toPublic(next, settings), settings);
+      await saveInvitation({ ...next, publishedSig: inviteSig(next, settings) });
+      toast('Short link ready ✓');
+    } catch (e: any) {
+      toast(`Could not publish: ${e.message}`);
+    }
+    setBusy(null);
+  };
+  useEffect(() => {
+    if (!inv || !hosting || published || busy) return;
+    const sig = inviteSig(inv, settings);
+    if (tried.current === sig) return; // don't retry the same version in a loop
+    tried.current = sig;
+    publish();
+  }, [inv, hosting, published]);
 
   if (!inv) return <div className="p-10 text-center text-stone-500">Invitation not found. <button className="text-brand-600 underline" onClick={() => go('/gallery')}>Back</button></div>;
 
@@ -80,6 +105,27 @@ export function SharePage({ id }: { id: string }) {
           </div>
         </div>
       )}
+
+      <div className={cx('mb-6 flex flex-col gap-3 rounded-2xl border p-4 text-sm sm:flex-row sm:items-center', published ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900')}>
+        <Link2 className="h-5 w-5 shrink-0" />
+        <div className="flex-1">
+          {published ? (
+            <><p className="font-semibold">Short link ready ✓ — safe to share anywhere</p><p className="mt-0.5 break-all text-xs opacity-80">{link}</p></>
+          ) : hosting ? (
+            <p className="font-semibold">{busy === 'publish' ? 'Publishing short link…' : 'Short link not published yet'}</p>
+          ) : (
+            <>
+              <p className="font-semibold">Recommended: turn on short links</p>
+              <p className="mt-0.5">This link is {kb(link.length)} long because the invitation travels inside it. Long links can be cut off by WhatsApp and then guests see “Oops”. With short links (free, 2-minute setup once) every link is tiny and all photos are included.</p>
+            </>
+          )}
+        </div>
+        {hosting ? (
+          <Btn size="sm" variant={published ? 'outline' : 'primary'} disabled={busy === 'publish'} onClick={publish}>{busy === 'publish' ? 'Publishing…' : published ? 'Publish again' : 'Publish short link'}</Btn>
+        ) : (
+          <Btn size="sm" variant="primary" onClick={() => go('/settings?hosting')}>Set up short links</Btn>
+        )}
+      </div>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-6">

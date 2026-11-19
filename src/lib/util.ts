@@ -45,7 +45,7 @@ export function initials(p?: Person) {
 /* ---------------- link encoding ---------------- */
 
 export function toPublic(inv: Invitation, settings?: Settings): PublicInvitation {
-  const { clientId, guests, status, price, paid, notes, photoInLink, createdAt, updatedAt, ...pub } = inv;
+  const { clientId, guests, status, price, paid, notes, photoInLink, createdAt, updatedAt, publishedSig, ...pub } = inv;
   const out: PublicInvitation = JSON.parse(JSON.stringify(pub));
   const isData = (s?: string) => !!s && s.startsWith('data:');
   if (photoInLink === 'none') {
@@ -114,7 +114,27 @@ export function fitPublic(inv: Invitation, settings?: Settings, budget = LINK_BU
   return pub;
 }
 
+export const DEFAULT_REPO = 'LvvNagendra/invitecraft';
+
+/** Fingerprint of the public data — tells whether the published short link is up to date. */
+export function inviteSig(inv: Invitation, settings?: Settings) {
+  const t = JSON.stringify(toPublic(inv, settings));
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return `${t.length}-${(h >>> 0).toString(36)}`;
+}
+
+export const isPublished = (inv: Invitation, settings: Settings) => !!inv.publishedSig && inv.publishedSig === inviteSig(inv, settings);
+
 export function inviteLink(inv: Invitation, settings: Settings, guestName?: string, opts?: { noPhotos?: boolean }) {
+  if (isPublished(inv, settings)) {
+    // short link: the invitation lives in the repository, the link only carries its id
+    const q = new URLSearchParams();
+    if (guestName?.trim()) q.set('to', guestName.trim());
+    if (settings.ghRepo && settings.ghRepo.trim() !== DEFAULT_REPO) q.set('r', settings.ghRepo.trim());
+    const qs = q.toString();
+    return `${baseUrl(settings)}#/v/${inv.id}${qs ? `?${qs}` : ''}`;
+  }
   const pub = opts?.noPhotos ? toPublic({ ...inv, photoInLink: 'none' }, settings) : fitPublic(inv, settings);
   if (opts?.noPhotos) {
     if (pub.hostA.photo?.startsWith('data:')) delete pub.hostA.photo;

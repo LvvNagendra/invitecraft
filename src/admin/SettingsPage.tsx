@@ -72,7 +72,7 @@ export function SettingsPage() {
 
         <Card className="space-y-4 p-5 ring-2 ring-brand-400/40">
           <span id="photo-hosting" />
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-wine-900"><CloudUpload className="h-5 w-5 text-brand-500" /> Free photo hosting (recommended)</h2>
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-wine-900"><CloudUpload className="h-5 w-5 text-brand-500" /> Short links &amp; photo hosting (recommended)</h2>
           <p className="text-sm text-stone-500">Without hosting, photos travel <em>inside</em> the link, so galleries make links too long for WhatsApp. With hosting, photos are saved in your GitHub repository and links stay short.</p>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-stone-500">
             <li>Open <a className="text-brand-600 underline" href="https://github.com/settings/personal-access-tokens/new?name=InviteCraft%20photos&description=Photo%20hosting%20for%20invitations&expires_in=none&contents=write" target="_blank" rel="noreferrer">GitHub → Fine-grained token</a>.</li>

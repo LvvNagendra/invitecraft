@@ -81,6 +81,7 @@ export interface Invitation {
   paid?: boolean;
   notes?: string;
   photoInLink: 'none' | 'couple' | 'all';
+  publishedSig?: string; // fingerprint of the version published as a short link
   createdAt: number;
   updatedAt: number;
 }
@@ -88,7 +89,7 @@ export interface Invitation {
 /** What actually travels inside the share link. */
 export type PublicInvitation = Omit<
   Invitation,
-  'clientId' | 'guests' | 'status' | 'price' | 'paid' | 'notes' | 'photoInLink' | 'createdAt' | 'updatedAt'
+  'clientId' | 'guests' | 'status' | 'price' | 'paid' | 'notes' | 'photoInLink' | 'publishedSig' | 'createdAt' | 'updatedAt'
 > & { brand?: string };
 
 export interface Client {
