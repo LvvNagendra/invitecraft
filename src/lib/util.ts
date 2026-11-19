@@ -86,9 +86,12 @@ export function decodeInvite(s: string): PublicInvitation | null {
   }
 }
 
+/** The published GitHub Pages site — used for share links when working locally. */
+export const LIVE_URL = 'https://lvvnagendra.github.io/invitecraft/';
+
 export function baseUrl(settings: Settings) {
   let u = (settings.publicUrl || '').trim();
-  if (!u) u = location.origin + location.pathname;
+  if (!u) u = isLocalUrl(location.href) ? LIVE_URL : location.origin + location.pathname;
   u = u.split('#')[0];
   return u;
 }
