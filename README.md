@@ -48,3 +48,23 @@ All invitation text is compressed (lz-string) into the URL fragment
 `#/i/<data>?to=<guest name>`. Portrait photos are compressed to ~10 KB and can be
 embedded too (Edit → Experience → photos in link). For very short links, paste photo
 URLs instead of uploading. QR codes automatically leave out photos to stay scannable.
+
+## Pages for your clients (no login needed)
+
+| Page | Link | Use |
+|---|---|---|
+| Showcase & prices | `https://lvvnagendra.github.io/invitecraft/#/showcase` | Send to new enquiries: live demos, features, packages, FAQ |
+| Client details form | `https://lvvnagendra.github.io/invitecraft/#/order` | Client fills names, date, venue, photos & package with live preview, then sends to you on WhatsApp |
+| Live demos | `#/demo/wedding`, `#/demo/birthday`, `#/demo/housewarming`, `#/demo/engagement` | Open a sample like a guest would |
+
+Use **Dashboard → Share with clients** to send these: the links there carry your business name,
+WhatsApp number and package prices (set them in Settings first).
+When the client sends the form, use **Import client details** and paste their WhatsApp message
+(or choose the details file with photos). A draft invitation is created for you.
+
+## Photos
+
+- Photos you upload travel inside the share link. That's fine for portraits and a few gallery photos.
+- For big galleries, turn on **Settings → Free photo hosting** (a GitHub token with
+  "Contents: Read and write" on this repo). Photos are then stored in the repo's `media` branch and
+  links stay short. The share page warns you when a link is too long for WhatsApp.
