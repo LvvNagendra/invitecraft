@@ -6,6 +6,7 @@ import { daysUntil, displayNames, fmtDate } from '../lib/util';
 import type { EventType } from '../types';
 import { Badge, Btn, Card } from './ui';
 import { InviteThumb } from './Thumb';
+import { ClientLinksCard } from './ClientLinks';
 
 export function Dashboard() {
   const invitations = useStore((s) => s.invitations);
@@ -48,6 +49,8 @@ export function Dashboard() {
         <Stat icon={<IndianRupee />} label="Revenue" value={`₹${revenue.toLocaleString('en-IN')}`} sub={pending ? `₹${pending.toLocaleString('en-IN')} pending` : 'all collected'} />
       </div>
 
+      <ClientLinksCard />
+
       {/* quick create */}
       <div>
         <h2 className="mb-3 font-display text-lg font-semibold text-wine-900">Start from an occasion</h2>
@@ -61,7 +64,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
         {/* recent */}
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -126,9 +129,6 @@ export function Dashboard() {
           </div>
         ))}
       </Card>
-      {!settings.publicUrl && (
-        <p className="text-center text-xs text-stone-400">Tip: set your published website address in Settings so shared links open for relatives.</p>
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { Person } from '../types';
 import { initials } from '../lib/util';
 
@@ -75,14 +75,16 @@ export function Divider({ color, className }: { color: string; className?: strin
 }
 
 export function Avatar({ person, size = 120, ring, ink, className }: { person?: Person; size?: number; ring: string; ink?: string; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [person?.photo]);
   return (
     <div
       className={`relative shrink-0 rounded-full p-[3px] ${className ?? ''}`}
       style={{ width: size, height: size, background: `conic-gradient(from 0deg, ${ring}, #fff7d1, ${ring}, #8a6414, ${ring})` }}
     >
       <div className="h-full w-full overflow-hidden rounded-full border-2 border-white/70 bg-black/10">
-        {person?.photo ? (
-          <img src={person.photo} alt={person.name} className="h-full w-full object-cover" />
+        {person?.photo && !broken ? (
+          <img src={person.photo} alt={person.name} className="h-full w-full object-cover" onError={() => setBroken(true)} />
         ) : (
           <div
             className="flex h-full w-full items-center justify-center font-deco"

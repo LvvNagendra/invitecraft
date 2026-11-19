@@ -38,6 +38,16 @@ export function Experience({ data, guest, embedded, link, startAt }: {
   const player = useMemo(() => new MusicPlayer(data.music, data.musicUrl), [data.music, data.musicUrl]);
 
   useEffect(() => () => player.dispose(), [player]);
+  useEffect(() => {
+    if (embedded) return;
+    // full-screen invitation: the page itself must never scroll (only the invitation inside it)
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    return () => { html.style.overflow = prev; document.body.style.overflow = ''; };
+  }, [embedded]);
   useEffect(() => setStage(startAt ?? 'envelope'), [startAt]);
 
   const startMusic = () => {
@@ -55,6 +65,7 @@ export function Experience({ data, guest, embedded, link, startAt }: {
   return (
     <C.Provider value={ctx}>
       <div
+        data-lang={data.lang}
         className={`relative overflow-hidden ${embedded ? 'h-full w-full' : 'h-[100dvh] w-full'}`}
         style={{ background: `linear-gradient(170deg, ${theme.bg1} 0%, ${theme.bg2} 55%, ${theme.bg1} 100%)`, color: theme.ink, fontFamily: LANG_FONT[data.lang] }}
       >
@@ -262,11 +273,21 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
   const ev = EVENTS[inv.type];
   const two = ev.twoHosts && !!inv.hostB?.name;
   const [calOpen, setCalOpen] = useState(false);
+  const heroPhoto = inv.gallery?.[0];
 
   return (
     <div className="relative mx-auto max-w-md pb-28">
       {/* hero */}
       <section className="relative flex min-h-[100%] flex-col items-center justify-center overflow-hidden px-6 pb-16 pt-20 text-center" style={{ minHeight: '92vh' }}>
+        {heroPhoto && (
+          <motion.div
+            className="pointer-events-none absolute inset-0"
+            initial={{ opacity: 0, scale: 1.15 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.4, ease: 'easeOut' }}
+            style={{ backgroundImage: `linear-gradient(180deg, ${theme.bg1}e6 0%, ${theme.bg1}88 40%, ${theme.bg1}cc 75%, ${theme.bg1} 100%), url("${heroPhoto}")`, backgroundSize: 'cover', backgroundPosition: 'center 25%' }}
+          />
+        )}
         <Mandala color={theme.gold} className="spin-slow pointer-events-none absolute left-1/2 top-[44%] w-[460px] -translate-x-1/2 -translate-y-1/2 opacity-[0.1]" />
         {guest && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="relative mb-8 rounded-2xl border px-5 py-3 backdrop-blur-sm" style={{ borderColor: `${theme.gold}66`, background: '#00000025' }}>

@@ -172,6 +172,9 @@ export async function copyText(text: string) {
   }
 }
 
+/** WhatsApp cuts messages at ~65,000 characters. */
+export const WA_LIMIT = 60000;
+
 export function kb(n: number) {
   return n < 1024 ? `${n} chars` : `${(n / 1024).toFixed(1)} KB`;
 }

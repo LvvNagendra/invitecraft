@@ -5,12 +5,21 @@ import { getState, loadStore, useStore } from './lib/store';
 import { toPublic } from './lib/util';
 import { Experience } from './guest/Experience';
 import { AdminApp } from './admin/AdminApp';
+import { readProfile } from './lib/business';
+import { DemoView, Showcase } from './client/Showcase';
+import { OrderForm } from './client/OrderForm';
 
 export default function App() {
   const hash = useHash();
+  const page = hash.split('?')[0].split('/').slice(0, 2).join('/');
+  useEffect(() => { window.scrollTo(0, 0); }, [page]); // pages share one document — start each at the top
 
   if (hash.startsWith('/i/')) return <GuestPage hash={hash} />;
   if (hash.startsWith('/preview/')) return <PreviewPage id={hash.split('/')[2]} />;
+  const [route, query = ''] = hash.split('?');
+  if (route === '/showcase') return <Showcase profile={readProfile(query)} />;
+  if (route === '/order') return <OrderForm profile={readProfile(query)} />;
+  if (route.startsWith('/demo/')) return <DemoView demoKey={route.split('/')[2]} profile={readProfile(query)} />;
   return <AdminApp hash={hash} />;
 }
 

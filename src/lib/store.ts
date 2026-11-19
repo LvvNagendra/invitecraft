@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import type { Client, EventType, Invitation, Settings } from '../types';
 import { EVENTS } from './themes';
 import { uid } from './util';
+import { DEFAULT_PACKAGES, demos, plusDays } from './demos';
 
 const idb = createStore('invitecraft-db', 'kv');
 
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultLang: 'en',
   defaultTheme: 'royal',
   nextCode: 1001,
+  packages: DEFAULT_PACKAGES,
 };
 
 let state: State = { ready: false, invitations: [], clients: [], settings: DEFAULT_SETTINGS };
@@ -58,26 +60,29 @@ export async function loadStore() {
   ]);
   const firstRun = !invitations;
   settings = { ...DEFAULT_SETTINGS, ...(settings || {}) };
-  state = { ready: true, invitations: invitations || [], clients: clients || [], settings };
+  if (!settings.packages?.length) settings.packages = DEFAULT_PACKAGES;
+  // migrations: gallery photos used to be left out of links by default; old demo had no photos
+  const wedding = demos()[0].inv;
+  invitations = (invitations || []).map((i) => {
+    let x = { ...i, photoInLink: i.photoInLink === 'couple' ? 'all' : i.photoInLink } as Invitation;
+    if (x.code === 'INV1001' && x.hostA.name === 'Priya' && !x.hostA.photo) {
+      x = { ...x, hostA: { ...x.hostA, photo: wedding.hostA!.photo }, hostB: { ...x.hostB!, photo: wedding.hostB!.photo }, gallery: wedding.gallery! };
+    }
+    return x;
+  });
+  state = { ready: true, invitations, clients: clients || [], settings };
   if (firstRun) {
     const client: Client = { id: uid(), name: 'Rahul Sharma', phone: '9876543210', city: 'Hyderabad', createdAt: Date.now() };
-    const demo = newInvitation('wedding', settings);
-    Object.assign(demo, DEMO_WEDDING, { clientId: client.id, status: 'ready' });
+    const demo = { ...newInvitation('wedding', settings), ...wedding, clientId: client.id, status: 'ready' as const, price: 1999, paid: true };
     state.clients = [client];
     state.invitations = [demo];
     state.settings = { ...settings, nextCode: settings.nextCode + 1 };
-    await persist();
   }
+  await persist();
   emit();
 }
 
 /* ---------------- invitations ---------------- */
-
-function plusDays(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export function newInvitation(type: EventType, settings: Settings = state.settings): Invitation {
   const ev = EVENTS[type];
@@ -107,7 +112,7 @@ export function newInvitation(type: EventType, settings: Settings = state.settin
     music: 'melody',
     guests: [],
     status: 'draft',
-    photoInLink: 'couple',
+    photoInLink: 'all',
     createdAt: now,
     updatedAt: now,
   };
@@ -170,7 +175,8 @@ export async function saveSettings(s: Settings) {
 /* ---------------- backup ---------------- */
 
 export function exportBackup() {
-  return JSON.stringify({ app: 'invitecraft', version: 1, exportedAt: new Date().toISOString(), ...state, ready: undefined }, null, 2);
+  const { ghToken, ...settings } = state.settings; // never put the token into a file
+  return JSON.stringify({ app: 'invitecraft', version: 1, exportedAt: new Date().toISOString(), invitations: state.invitations, clients: state.clients, settings }, null, 2);
 }
 
 export async function importBackup(json: string) {
@@ -184,28 +190,29 @@ export async function importBackup(json: string) {
   await persist();
 }
 
-/* ---------------- demo ---------------- */
+/** Adds the ready-made sample invitations (for showing to clients). */
+export async function addDemoInvitations() {
+  let code = state.settings.nextCode;
+  const created = demos().map((d) => ({ ...newInvitation(d.inv.type!), ...d.inv, code: `INV${code++}`, status: 'ready' as const, notes: 'Demo invitation' }));
+  setState({ invitations: [...created, ...state.invitations], settings: { ...state.settings, nextCode: code } });
+  await persist();
+  return created.length;
+}
 
-const DEMO_WEDDING: Partial<Invitation> = {
-  hostA: { name: 'Priya', parents: 'D/o Sri Venkat Rao & Smt. Lakshmi', family: 'Kommineni' },
-  hostB: { name: 'Rahul', parents: 'S/o Sri Suresh Sharma & Smt. Anitha', family: 'Sharma' },
-  blessing: '|| Sri Venkateswara Prasanna ||',
-  headline: 'Together with their families',
-  message:
-    'With the divine blessings of the Almighty and our elders, we cordially invite you and your family to grace the auspicious occasion of the marriage of our beloved children. Your gracious presence and heartfelt blessings will make this day complete.',
-  invitedBy: "With love,\nRahul & Priya's Family",
-  date: plusDays(26),
-  time: '10:30',
-  timeLabel: 'Muhurtham',
-  venueName: 'Sri Convention Hall',
-  venueAddress: 'Road No. 10, Banjara Hills, Hyderabad',
-  hostPhone: '9876543210',
-  dressCode: 'Traditional Indian attire',
-  hashtag: '#PriyaWedsRahul',
-  events: [
-    { id: 'e1', title: 'Haldi & Mehendi', date: plusDays(24), time: '16:00', venue: 'Bride’s Residence' },
-    { id: 'e2', title: 'Sangeet Night', date: plusDays(25), time: '19:00', venue: 'Sri Convention Hall' },
-    { id: 'e3', title: 'Wedding (Muhurtham)', date: plusDays(26), time: '10:30', venue: 'Sri Convention Hall' },
-    { id: 'e4', title: 'Reception', date: plusDays(26), time: '19:30', venue: 'Sri Convention Hall' },
-  ],
-};
+/** Creates a client + draft invitation from a client details form submission. */
+export async function importOrder(order: import('../types').ClientOrder) {
+  const client: Client = { id: uid(), name: order.client.name || 'New client', phone: order.client.phone, city: order.client.city, notes: [order.pkg && `Package: ${order.pkg}`, order.client.notes].filter(Boolean).join(' · '), createdAt: Date.now() };
+  const base = newInvitation(order.inv.type && order.inv.type in EVENTS ? order.inv.type : 'wedding');
+  const pkg = state.settings.packages.find((p) => p.name === order.pkg);
+  const inv: Invitation = {
+    ...base, ...order.inv,
+    id: base.id, code: base.code, guests: [], status: 'draft', clientId: client.id, photoInLink: 'all',
+    price: pkg?.price, paid: false, createdAt: base.createdAt, updatedAt: base.updatedAt,
+    hostA: { ...base.hostA, ...(order.inv.hostA || {}) },
+    hostB: EVENTS[base.type].twoHosts || order.inv.hostB ? { name: '', ...(order.inv.hostB || {}) } : undefined,
+    events: order.inv.events || [], gallery: order.inv.gallery || [],
+  } as Invitation;
+  setState({ clients: [client, ...state.clients], invitations: [inv, ...state.invitations], settings: { ...state.settings, nextCode: state.settings.nextCode + 1 } });
+  await persist();
+  return inv;
+}

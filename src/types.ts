@@ -110,4 +110,30 @@ export interface Settings {
   defaultLang: Lang;
   defaultTheme: ThemeId;
   nextCode: number;
+  packages: Package[];
+  ghToken?: string; // optional GitHub token for photo hosting (never exported / shared)
+  ghRepo?: string; // owner/repo
+}
+
+export interface Package {
+  name: string;
+  price: number;
+  features: string[];
+  popular?: boolean;
+}
+
+/** Public business profile carried in showcase / client-form links. */
+export interface BusinessProfile {
+  name: string;
+  tagline: string;
+  phone: string;
+  packages: Package[];
+}
+
+/** What a client submits through the details form. */
+export interface ClientOrder {
+  v: 1;
+  client: { name: string; phone: string; city?: string; notes?: string };
+  pkg?: string;
+  inv: Partial<Invitation>;
 }

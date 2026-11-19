@@ -6,6 +6,7 @@ import { go } from '../lib/router';
 import { EVENTS } from '../lib/themes';
 import { displayNames, uid, waLink } from '../lib/util';
 import { Btn, Card, Field, Modal, PageHeader, toast } from './ui';
+import { ImportOrderButton } from './ClientLinks';
 
 export function Clients() {
   const clients = useStore((s) => s.clients);
@@ -16,7 +17,7 @@ export function Clients() {
 
   return (
     <div>
-      <PageHeader title="Clients" sub={`${clients.length} families you work with`} actions={<Btn variant="primary" onClick={() => setEdit({ id: uid(), name: '', createdAt: Date.now() })}><Plus className="h-4 w-4" /> Add client</Btn>} />
+      <PageHeader title="Clients" sub={`${clients.length} families you work with`} actions={<><ImportOrderButton /><Btn variant="primary" onClick={() => setEdit({ id: uid(), name: '', createdAt: Date.now() })}><Plus className="h-4 w-4" /> Add client</Btn></>} />
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
         <input className="input !pl-9" placeholder="Search by name, phone or city" value={q} onChange={(e) => setQ(e.target.value)} />

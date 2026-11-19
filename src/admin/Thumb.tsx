@@ -6,8 +6,17 @@ import { Mandala } from '../components/Ornaments';
 export function InviteThumb({ inv, className }: { inv: Invitation; className?: string }) {
   const th = THEMES[inv.theme];
   const ev = EVENTS[inv.type];
+  const cover = inv.gallery?.[0] || inv.hostA.photo;
   return (
-    <div className={`relative overflow-hidden ${className ?? ''}`} style={{ background: `radial-gradient(ellipse at 50% 30%, ${th.bg2}, ${th.bg1})`, color: th.ink }}>
+    <div
+      className={`relative overflow-hidden ${className ?? ''}`}
+      style={{
+        background: cover
+          ? `linear-gradient(180deg, ${th.bg1}99, ${th.bg1}cc 60%, ${th.bg1}), url("${cover}") center 25% / cover`
+          : `radial-gradient(ellipse at 50% 30%, ${th.bg2}, ${th.bg1})`,
+        color: th.ink,
+      }}
+    >
       <Mandala color={th.gold} className="absolute left-1/2 top-1/2 w-[140%] -translate-x-1/2 -translate-y-1/2 opacity-15" />
       <div className="relative flex h-full flex-col items-center justify-center p-4 text-center">
         <span className="text-2xl">{ev.emoji}</span>

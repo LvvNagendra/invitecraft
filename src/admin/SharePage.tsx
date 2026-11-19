@@ -9,7 +9,8 @@ import { go } from '../lib/router';
 import { EVENTS } from '../lib/themes';
 import { whatsappMessage } from '../lib/messages';
 import { posterPdf, posterPng } from '../lib/poster';
-import { copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl } from '../lib/util';
+import { copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
+import { hostAllPhotos, hostingReady } from '../lib/hosting';
 import { Experience } from '../guest/Experience';
 import { Badge, Btn, Card, cx, Field, Modal, PageHeader, PhoneFrame, toast } from './ui';
 import { InviteThumb } from './Thumb';
@@ -79,8 +80,25 @@ export function SharePage({ id }: { id: string }) {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-6">
+      {link.length > 15000 && (
+        <div className={cx('mb-6 flex flex-col gap-3 rounded-2xl border p-4 text-sm sm:flex-row sm:items-center', link.length > WA_LIMIT ? 'border-red-200 bg-red-50 text-red-800' : 'border-sky-200 bg-sky-50 text-sky-900')}>
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold">{link.length > WA_LIMIT ? `Link is too long for WhatsApp (${kb(link.length)})` : `Link is long (${kb(link.length)}) because photos are inside it`}</p>
+            <p className="mt-0.5">{hostingReady(settings) ? 'Upload the photos to your free photo hosting to make the link short.' : 'Turn on free photo hosting in Settings, or remove gallery photos (Edit → Experience).'}</p>
+          </div>
+          {hostingReady(settings) ? (
+            <Btn variant="primary" disabled={busy === 'host'} onClick={() => run('host', async () => {
+              const next = await hostAllPhotos(inv, settings, (d, t) => toast(`Uploaded ${d}/${t}`));
+              await saveInvitation(next);
+              toast('Photos uploaded — link is short now ✓');
+            })}>{busy === 'host' ? 'Uploading…' : 'Upload photos'}</Btn>
+          ) : <Btn onClick={() => go('/settings')}>Open Settings</Btn>}
+        </div>
+      )}
+
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 space-y-6">
           <Card className="flex items-center gap-4 p-4">
             <InviteThumb inv={inv} className="h-28 w-20 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1">
@@ -114,7 +132,7 @@ export function SharePage({ id }: { id: string }) {
           <GuestList inv={inv} />
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between border-b border-stone-100 bg-[#efe7dc] px-4 py-2.5">
               <p className="flex items-center gap-2 text-sm font-semibold text-stone-700"><MessageCircle className="h-4 w-4 text-[#25D366]" /> WhatsApp message</p>
@@ -241,7 +259,7 @@ function GuestList({ inv }: { inv: Invitation }) {
                   <p className="truncate text-sm font-medium">{g.name}</p>
                   <p className="text-xs text-stone-400">{g.phone || 'Choose chat in WhatsApp'}</p>
                 </div>
-                <Btn size="sm" variant="whatsapp" onClick={() => send(g)}><MessageCircle className="h-3.5 w-3.5" /> {g.sent ? 'Resend' : 'Send'}</Btn>
+                <Btn size="sm" variant="whatsapp" onClick={() => send(g)}><MessageCircle className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{g.sent ? 'Resend' : 'Send'}</span></Btn>
                 <Btn size="sm" variant="ghost" aria-label="Copy link" onClick={async () => { await copyText(inviteLink(inv, settings, g.name)); toast(`Link for ${g.name} copied`); }}><Copy className="h-3.5 w-3.5" /></Btn>
                 <Btn size="sm" variant="ghost" aria-label="Remove" onClick={() => update(inv.guests.filter((x) => x.id !== g.id))}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Btn>
               </div>

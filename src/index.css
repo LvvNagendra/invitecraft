@@ -76,3 +76,6 @@ textarea.input { resize: vertical; min-height: 5rem; }
 @media print {
   .no-print { display: none !important; }
 }
+
+/* letter-spacing breaks Telugu / Devanagari conjuncts */
+[data-lang="te"] [class*="tracking-"], [data-lang="hi"] [class*="tracking-"] { letter-spacing: 0 !important; }
