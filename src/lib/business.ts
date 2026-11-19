@@ -27,10 +27,16 @@ export const profileQuery = (p: BusinessProfile) => `?p=${enc(JSON.stringify(p))
 
 const PREFIX = 'IC1-';
 
-/** Short code for WhatsApp (photos are left out — they are sent separately or via the file). */
-export function orderCode(o: ClientOrder) {
-  const inv = { ...o.inv, gallery: [], hostA: o.inv.hostA && { ...o.inv.hostA, photo: undefined }, hostB: o.inv.hostB && { ...o.inv.hostB, photo: undefined } };
-  return PREFIX + enc(JSON.stringify({ ...o, inv }));
+/**
+ * Code for the WhatsApp message. Portrait photos (small, ~10 KB each) are included so they
+ * arrive with the details; gallery photos are too big for a message and travel in the details file.
+ */
+export function orderCode(o: ClientOrder): { code: string; portraits: boolean } {
+  const inv = { ...o.inv, gallery: [] };
+  const code = PREFIX + enc(JSON.stringify({ ...o, inv }));
+  if (code.length <= 45000) return { code, portraits: true };
+  const noPhotos = { ...inv, hostA: inv.hostA && { ...inv.hostA, photo: undefined }, hostB: inv.hostB && { ...inv.hostB, photo: undefined } };
+  return { code: PREFIX + enc(JSON.stringify({ ...o, inv: noPhotos })), portraits: false };
 }
 
 /** Accepts a pasted WhatsApp message, a bare code, or the JSON details file. */

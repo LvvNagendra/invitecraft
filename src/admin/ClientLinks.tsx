@@ -18,7 +18,8 @@ export function ImportOrderButton({ variant = 'outline' as const }: { variant?: 
     const inv = await importOrder(order);
     setOpen(false);
     setText('');
-    toast(`Imported ${order.client.name}'s details ✓`);
+    const pics = [order.inv.hostA?.photo, order.inv.hostB?.photo].filter(Boolean).length + (order.inv.gallery?.length || 0);
+    toast(pics ? `Imported ${order.client.name}'s details with ${pics} photo(s) ✓` : `Imported ${order.client.name}'s details ✓ — no photos received, add them in the editor`);
     go(`/edit/${inv.id}`);
   };
 

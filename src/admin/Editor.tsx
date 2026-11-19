@@ -1,12 +1,12 @@
 import { Camera, Eye, ImagePlus, Link2, Plus, RotateCcw, Save, Share2, Trash2, Wand2, X } from 'lucide-react';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { EventItem, EventType, Invitation, Lang, Person, ThemeId } from '../types';
 import { EVENTS, THEMES } from '../lib/themes';
 import { getState, newInvitation, saveInvitation, useStore } from '../lib/store';
 import { go } from '../lib/router';
 import { compressImage } from '../lib/media';
 import { BLESSINGS, studioMessages } from '../lib/messages';
-import { encodeInvite, kb, toPublic, uid, WA_LIMIT } from '../lib/util';
+import { encodeInvite, fitPublic, kb, toPublic, uid, WA_LIMIT } from '../lib/util';
 import { hostingReady, uploadPhoto } from '../lib/hosting';
 import type { Settings } from '../types';
 import { Experience } from '../guest/Experience';
@@ -25,13 +25,31 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
   const [previewKey, setPreviewKey] = useState(0);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const ev = EVENTS[inv.type];
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'unsaved'>(existing ? 'saved' : 'unsaved');
+  const firstRun = useRef(true);
+
+  // Autosave: every change (including uploaded photos) is stored automatically
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    setSaveState('unsaved');
+    if (!inv.hostA.name.trim()) return; // a new invitation is saved once it has a name
+    const t = setTimeout(async () => {
+      setSaveState('saving');
+      await saveInvitation(inv);
+      setSaveState('saved');
+    }, 700);
+    return () => clearTimeout(t);
+  }, [inv]);
 
   const up = (patch: Partial<Invitation>) => setInv((x) => ({ ...x, ...patch }));
   const upA = (p: Partial<Person>) => setInv((x) => ({ ...x, hostA: { ...x.hostA, ...p } }));
   const upB = (p: Partial<Person>) => setInv((x) => ({ ...x, hostB: { ...(x.hostB || { name: '' }), ...p } }));
 
-  const pub = useMemo(() => toPublic(inv, settings), [inv, settings]);
+  const full = useMemo(() => toPublic(inv, settings), [inv, settings]);
+  const pub = useMemo(() => fitPublic(inv, settings), [inv, settings]); // what guests actually receive
+  const fullSize = useMemo(() => encodeInvite(full).length, [full]);
   const linkSize = useMemo(() => encodeInvite(pub).length, [pub]);
+  const droppedGallery = full.gallery.length - pub.gallery.length;
 
   const setType = (t: EventType) => {
     const e = EVENTS[t];
@@ -51,8 +69,8 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
       setTab('Date & Venue');
       return toast('Please choose the event date');
     }
-    const code = existing ? inv.code : `INV${getState().settings.nextCode}`;
-    const saved = await saveInvitation({ ...inv, code, status: inv.status === 'draft' && andShare ? 'ready' : inv.status });
+    const saved = await saveInvitation({ ...inv, status: inv.status === 'draft' && andShare ? 'ready' : inv.status });
+    setSaveState('saved');
     toast(andShare ? 'Saved! Ready to share 🎉' : 'Saved ✓');
     if (andShare) go(`/share/${saved.id}`);
     else if (!existing) go(`/edit/${saved.id}`);
@@ -71,10 +89,16 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
         ))}
         <button type="button" onClick={() => setPreviewKey((k) => k + 1)} className="rounded-full p-1.5 text-stone-500 ring-1 ring-stone-200 hover:bg-white" aria-label="Replay"><RotateCcw className="h-3.5 w-3.5" /></button>
       </div>
-      <p className={cx('text-center text-xs', linkSize > WA_LIMIT ? 'font-semibold text-red-600' : linkSize > 15000 ? 'text-amber-600' : 'text-stone-400')}>
-        Share link size: {kb(linkSize)}
-        {linkSize > WA_LIMIT ? ' — too long for WhatsApp! Turn on photo hosting (Settings) or remove gallery photos.' : linkSize > 15000 ? ' — works, but photo hosting (Settings) makes it much shorter.' : ' ✓'}
-      </p>
+      {fullSize > linkSize ? (
+        <div className="rounded-xl bg-amber-50 p-3 text-center text-xs text-amber-900">
+          <b>{pub.gallery.length} of {full.gallery.length} gallery photos</b> fit in a WhatsApp link{droppedGallery ? '' : ' (portraits trimmed)'}.
+          <button type="button" onClick={() => go('/settings?hosting')} className="ml-1 font-semibold underline">Turn on free photo hosting</button> to include all photos.
+        </div>
+      ) : (
+        <p className={cx('text-center text-xs', linkSize > 15000 ? 'text-amber-600' : 'text-stone-400')}>
+          Share link size: {kb(linkSize)} {linkSize > 15000 ? '— works; photo hosting makes it shorter' : '✓ all photos included'}
+        </p>
+      )}
     </div>
   );
 
@@ -82,7 +106,7 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
     <div>
       <PageHeader
         title={existing ? `Edit ${inv.code}` : 'Create Invitation'}
-        sub={`${ev.emoji} ${ev.label} · ${THEMES[inv.theme].name}`}
+        sub={`${ev.emoji} ${ev.label} · ${THEMES[inv.theme].name} · ${saveState === 'saved' ? '✓ All changes saved' : saveState === 'saving' ? 'Saving…' : inv.hostA.name.trim() ? 'Unsaved changes' : 'Enter a name to start auto-saving'}`}
         actions={
           <>
             <Btn className="xl:hidden" onClick={() => setShowPreviewMobile(true)}><Eye className="h-4 w-4" /> Preview</Btn>
@@ -248,7 +272,7 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
                   </div>
                   {inv.music === 'custom' && <input className="input mt-2" value={inv.musicUrl || ''} onChange={(e) => up({ musicUrl: e.target.value })} placeholder="https://…/song.mp3 (direct MP3 link you have rights to)" />}
                 </Field>
-                <Field label="Couple / host photos inside the share link" hint={hostingReady(settings) ? 'Photo hosting is ON — photos are uploaded and the link stays short.' : 'Without photo hosting, uploaded photos travel inside the link. Turn on free photo hosting in Settings for big galleries.'}>
+                <Field label="Couple / host photos inside the share link" hint={hostingReady(settings) ? 'Photo hosting is ON — photos are uploaded and the link stays short.' : 'Without photo hosting, photos travel inside the link and a WhatsApp link can only carry about 2 small photos. Turn on free photo hosting (Settings) for bigger galleries.'}>
                   <div className="flex flex-wrap gap-2">
                     {([['all', 'All photos'], ['couple', 'Portraits only'], ['none', 'No photos']] as const).map(([m, l]) => (
                       <button key={m} type="button" onClick={() => up({ photoInLink: m })} className={cx('rounded-xl border px-4 py-2 text-sm', inv.photoInLink === m ? 'border-brand-500 bg-brand-50 font-semibold' : 'border-stone-200')}>{l}</button>

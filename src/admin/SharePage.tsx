@@ -9,7 +9,7 @@ import { go } from '../lib/router';
 import { EVENTS } from '../lib/themes';
 import { whatsappMessage } from '../lib/messages';
 import { posterPdf, posterPng } from '../lib/poster';
-import { copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
+import { fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
 import { hostAllPhotos, hostingReady } from '../lib/hosting';
 import { Experience } from '../guest/Experience';
 import { Badge, Btn, Card, cx, Field, Modal, PageHeader, PhoneFrame, toast } from './ui';
@@ -31,7 +31,7 @@ export function SharePage({ id }: { id: string }) {
   if (!inv) return <div className="p-10 text-center text-stone-500">Invitation not found. <button className="text-brand-600 underline" onClick={() => go('/gallery')}>Back</button></div>;
 
   const local = isLocalUrl(baseUrl(settings));
-  const pub = toPublic(inv, settings);
+  const pub = fitPublic(inv, settings); // exactly what guests receive
   const fname = `${slug(displayNames(inv))}-${inv.code}`;
   const markSent = () => inv.status !== 'sent' && saveInvitation({ ...inv, status: 'sent' });
 
@@ -51,9 +51,9 @@ export function SharePage({ id }: { id: string }) {
       if (navigator.share) await navigator.share({ title: EVENTS[inv.type].title.en, text: msg }).catch(() => {});
       else { await copyText(msg); toast('Sharing not supported here — message copied'); }
     } },
-    { key: 'png', icon: <ImageIcon />, label: 'Download HD Image', sub: '1080×1920 · WhatsApp status ready', onClick: () => run('png', async () => downloadDataUrl(await posterPng(pub, qrLink), `${fname}.png`)) },
+    { key: 'png', icon: <ImageIcon />, label: 'Download HD Image', sub: qrLink !== link ? '1080×1920 · its QR opens without photos' : '1080×1920 · WhatsApp status ready', onClick: () => run('png', async () => downloadDataUrl(await posterPng(pub, qrLink), `${fname}.png`)) },
     { key: 'pdf', icon: <FileText />, label: 'Download PDF', sub: 'Print-ready, clickable', onClick: () => run('pdf', async () => { (await posterPdf(pub, link)).save(`${fname}.pdf`); }) },
-    { key: 'qr', icon: <QrCode />, label: 'Generate QR Code', sub: 'For printed cards & banners', onClick: () => setQrOpen(true) },
+    { key: 'qr', icon: <QrCode />, label: 'Generate QR Code', sub: qrLink !== link ? 'Opens without photos (link too long for QR)' : 'For printed cards & banners', onClick: () => setQrOpen(true) },
     { key: 'phone', icon: <Smartphone />, label: 'Preview on Mobile', sub: 'Exactly what guests see', onClick: () => setPhoneOpen(true) },
   ];
 
@@ -80,23 +80,6 @@ export function SharePage({ id }: { id: string }) {
         </div>
       )}
 
-      {link.length > 15000 && (
-        <div className={cx('mb-6 flex flex-col gap-3 rounded-2xl border p-4 text-sm sm:flex-row sm:items-center', link.length > WA_LIMIT ? 'border-red-200 bg-red-50 text-red-800' : 'border-sky-200 bg-sky-50 text-sky-900')}>
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <div className="flex-1">
-            <p className="font-semibold">{link.length > WA_LIMIT ? `Link is too long for WhatsApp (${kb(link.length)})` : `Link is long (${kb(link.length)}) because photos are inside it`}</p>
-            <p className="mt-0.5">{hostingReady(settings) ? 'Upload the photos to your free photo hosting to make the link short.' : 'Turn on free photo hosting in Settings, or remove gallery photos (Edit → Experience).'}</p>
-          </div>
-          {hostingReady(settings) ? (
-            <Btn variant="primary" disabled={busy === 'host'} onClick={() => run('host', async () => {
-              const next = await hostAllPhotos(inv, settings, (d, t) => toast(`Uploaded ${d}/${t}`));
-              await saveInvitation(next);
-              toast('Photos uploaded — link is short now ✓');
-            })}>{busy === 'host' ? 'Uploading…' : 'Upload photos'}</Btn>
-          ) : <Btn onClick={() => go('/settings')}>Open Settings</Btn>}
-        </div>
-      )}
-
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-6">
           <Card className="flex items-center gap-4 p-4">
@@ -107,6 +90,18 @@ export function SharePage({ id }: { id: string }) {
               <div className="mt-2 flex flex-wrap gap-1.5"><StatusBadge status={inv.status} /><Badge>{inv.guests.length} guests</Badge></div>
             </div>
           </Card>
+
+          <PhotoCheck
+            inv={inv}
+            pub={pub}
+            hosting={hostingReady(settings)}
+            busy={busy === 'host'}
+            onHost={() => run('host', async () => {
+              const next = await hostAllPhotos(inv, settings, (d, t) => toast(`Uploading photos ${d}/${t}…`));
+              await saveInvitation(next);
+              toast('All photos uploaded — every photo is in the link now ✓');
+            })}
+          />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {actions.map((a) => (
@@ -268,5 +263,45 @@ function GuestList({ inv }: { inv: Invitation }) {
         </>
       )}
     </Card>
+  );
+}
+
+/** Shows whether the invitation's photos are actually inside the share link. */
+function PhotoCheck({ inv, pub, hosting, busy, onHost }: { inv: Invitation; pub: ReturnType<typeof fitPublic>; hosting: boolean; busy: boolean; onHost: () => void }) {
+  const portraits = [inv.hostA.photo, inv.hostB?.photo].filter(Boolean).length;
+  const portraitsIn = [pub.hostA.photo, pub.hostB?.photo].filter(Boolean).length;
+  const gallery = inv.gallery.length;
+  const galleryIn = pub.gallery.length;
+  const none = portraits + gallery === 0;
+  const missing = portraitsIn < portraits || galleryIn < gallery;
+  const switchedOff = inv.photoInLink !== 'all';
+  const embedded = [inv.hostA.photo, inv.hostB?.photo, ...inv.gallery].some((x) => x?.startsWith('data:'));
+  return (
+    <div className={cx('rounded-2xl border p-4 text-sm', none || missing ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900')}>
+      <div className="flex gap-3">
+        <ImageIcon className="mt-0.5 h-5 w-5 shrink-0" />
+        <div className="flex-1">
+          {none ? (
+            <p><b>No photos in this invitation.</b> Guests will see initials. Add portraits in Edit → People and a gallery in Edit → Experience.</p>
+          ) : (
+            <>
+              <p><b>Photos guests will see:</b> {portraitsIn}/{portraits} portrait{portraits === 1 ? '' : 's'} · {galleryIn}/{gallery} gallery {missing ? '' : '✓'}</p>
+              {missing && switchedOff && <p className="mt-1">Some photos are switched off. Edit → Experience → Photos in the share link → <b>All photos</b>.</p>}
+              {missing && !switchedOff && !hosting && (
+                <p className="mt-1">Photos are stored inside the link, and a WhatsApp message can only carry about 2 small photos. <b>Turn on free photo hosting</b> (2 minutes, once) and every photo will be included with a short link.</p>
+              )}
+              {missing && !switchedOff && hosting && <p className="mt-1">Upload the photos to your photo hosting and every photo will be included.</p>}
+            </>
+          )}
+        </div>
+      </div>
+      {(none || missing || (hosting && embedded)) && (
+        <div className="mt-3 flex flex-wrap gap-2 pl-8">
+          {none || switchedOff ? <Btn size="sm" onClick={() => go(`/edit/${inv.id}`)}>Add / fix photos</Btn> : null}
+          {!none && hosting && embedded && <Btn size="sm" variant="primary" disabled={busy} onClick={onHost}>{busy ? 'Uploading…' : 'Upload photos'}</Btn>}
+          {!none && missing && !hosting && <Btn size="sm" variant="primary" onClick={() => go('/settings?hosting')}>Set up photo hosting</Btn>}
+        </div>
+      )}
+    </div>
   );
 }

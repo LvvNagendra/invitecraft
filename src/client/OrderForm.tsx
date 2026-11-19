@@ -77,6 +77,7 @@ export function OrderForm({ profile }: { profile: BusinessProfile }) {
 
   const summary = () => {
     const o = order();
+    const { code, portraits: portraitsIn } = orderCode(o);
     const L = [
       `🙏 New Invitation Request — ${profile.name}`,
       '',
@@ -91,12 +92,13 @@ export function OrderForm({ profile }: { profile: BusinessProfile }) {
       `📍 ${inv.venueName}${inv.venueAddress ? `, ${inv.venueAddress}` : ''}`,
       inv.events?.length ? `🗓️ Functions: ${inv.events.map((e) => e.title).filter(Boolean).join(', ')}` : '',
       `🎨 Theme: ${THEMES[inv.theme as ThemeId].name} · ${inv.lang === 'te' ? 'Telugu' : inv.lang === 'hi' ? 'Hindi' : 'English'}`,
-      `📸 Photos: ${photoCount} portrait(s), ${galleryCount} gallery — I will send them in this chat`,
+      photoCount ? `📸 Portrait photos: ${photoCount} ${portraitsIn ? '(included below ✓)' : '(will send in this chat)'}` : '📸 Portrait photos: none',
+      galleryCount ? `🖼️ Gallery photos: ${galleryCount} (sharing the details file in this chat)` : '',
       ownSong ? '🎶 Music: we will send our own song' : '',
       client.notes ? `📝 ${client.notes}` : '',
       '',
       `Details code (for ${profile.name} — please don't edit):`,
-      orderCode(o),
+      code,
     ];
     return L.filter((x, i) => x !== '' || L[i - 1] !== '').join('\n');
   };
@@ -357,7 +359,7 @@ function PersonCard({ label, p, onChange }: { label: string; p: Person; onChange
         </button>
         <input ref={ref} type="file" accept="image/*" hidden onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange({ photo: await compressImage(f, 520, 0.78) });
+          if (f) onChange({ photo: await compressImage(f, 220, 0.6) }); // small enough to travel in the WhatsApp message
           e.target.value = '';
         }} />
         <div className="flex-1 space-y-2">

@@ -1,5 +1,5 @@
 import { CloudUpload, Download, Globe, Plus, Save, Sparkles, Trash2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Lang, Settings } from '../types';
 import { addDemoInvitations, exportBackup, importBackup, saveSettings, useStore } from '../lib/store';
 import { testHosting } from '../lib/hosting';
@@ -16,6 +16,9 @@ export function SettingsPage() {
   const file = useRef<HTMLInputElement>(null);
   const up = (p: Partial<Settings>) => setS((x) => ({ ...x, ...p }));
   const current = location.origin + location.pathname;
+  useEffect(() => {
+    if (location.hash.includes('?hosting')) setTimeout(() => document.getElementById('photo-hosting')?.scrollIntoView({ behavior: 'smooth' }), 100);
+  }, []);
 
   return (
     <div className="max-w-3xl">
@@ -67,11 +70,12 @@ export function SettingsPage() {
           <button type="button" className="text-xs text-brand-600 hover:underline" onClick={() => up({ packages: DEFAULT_PACKAGES })}>Reset to default packages</button>
         </Card>
 
-        <Card className="space-y-4 p-5">
+        <Card className="space-y-4 p-5 ring-2 ring-brand-400/40">
+          <span id="photo-hosting" />
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-wine-900"><CloudUpload className="h-5 w-5 text-brand-500" /> Free photo hosting (recommended)</h2>
           <p className="text-sm text-stone-500">Without hosting, photos travel <em>inside</em> the link, so galleries make links too long for WhatsApp. With hosting, photos are saved in your GitHub repository and links stay short.</p>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-stone-500">
-            <li>Open <a className="text-brand-600 underline" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">GitHub → Fine-grained token</a>.</li>
+            <li>Open <a className="text-brand-600 underline" href="https://github.com/settings/personal-access-tokens/new?name=InviteCraft%20photos&description=Photo%20hosting%20for%20invitations&expires_in=none&contents=write" target="_blank" rel="noreferrer">GitHub → Fine-grained token</a>.</li>
             <li>Repository access: <b>Only select repositories</b> → your invitecraft repo. Permissions → <b>Contents: Read and write</b>.</li>
             <li>Generate, then paste the token below (it stays only in this browser and is never shared or backed up).</li>
           </ol>

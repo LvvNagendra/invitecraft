@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultTheme: 'royal',
   nextCode: 1001,
   packages: DEFAULT_PACKAGES,
+  ghRepo: 'LvvNagendra/invitecraft',
 };
 
 let state: State = { ready: false, invitations: [], clients: [], settings: DEFAULT_SETTINGS };

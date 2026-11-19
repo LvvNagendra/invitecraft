@@ -96,11 +96,30 @@ export function baseUrl(settings: Settings) {
   return u;
 }
 
+/**
+ * The public data that goes into the share link, trimmed so the link fits in a WhatsApp message:
+ * embedded (data:) gallery photos are dropped from the end until it fits, then embedded portraits.
+ * Hosted photo URLs are tiny and always kept.
+ */
+export function fitPublic(inv: Invitation, settings?: Settings, budget = WA_LIMIT - 3000): PublicInvitation {
+  const pub = toPublic(inv, settings);
+  const isData = (x?: string) => !!x && x.startsWith('data:');
+  const size = () => encodeInvite(pub).length;
+  if (size() <= budget) return pub;
+  for (let i = pub.gallery.length - 1; i >= 0 && size() > budget; i--) {
+    if (isData(pub.gallery[i])) pub.gallery.splice(i, 1);
+  }
+  if (size() > budget && isData(pub.hostB?.photo)) delete pub.hostB!.photo;
+  if (size() > budget && isData(pub.hostA.photo)) delete pub.hostA.photo;
+  return pub;
+}
+
 export function inviteLink(inv: Invitation, settings: Settings, guestName?: string, opts?: { noPhotos?: boolean }) {
-  const pub = toPublic(opts?.noPhotos ? { ...inv, photoInLink: 'none' } : inv, settings);
+  const pub = opts?.noPhotos ? toPublic({ ...inv, photoInLink: 'none' }, settings) : fitPublic(inv, settings);
   if (opts?.noPhotos) {
     if (pub.hostA.photo?.startsWith('data:')) delete pub.hostA.photo;
     if (pub.hostB?.photo?.startsWith('data:')) delete pub.hostB.photo;
+    pub.gallery = pub.gallery.filter((g) => !g.startsWith('data:'));
   }
   let link = `${baseUrl(settings)}#/i/${encodeInvite(pub)}`;
   if (guestName?.trim()) link += `?to=${encodeURIComponent(guestName.trim())}`;
@@ -127,8 +146,10 @@ export function waLink(text: string, phone?: string) {
 /* ---------------- maps ---------------- */
 
 export function mapsLink(inv: Pick<Invitation, 'mapUrl' | 'venueName' | 'venueAddress'>) {
-  if (inv.mapUrl?.trim()) return inv.mapUrl.trim();
-  const q = [inv.venueName, inv.venueAddress].filter(Boolean).join(', ');
+  const m = inv.mapUrl?.trim() || '';
+  if (/^https?:\/\//i.test(m)) return m;
+  // not a link (e.g. a village name typed in the map field) — use it as part of the search
+  const q = [inv.venueName, inv.venueAddress, m].filter(Boolean).join(', ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
