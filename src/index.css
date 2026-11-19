@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-display: 'Cinzel', serif;
+  --font-deco: 'Cinzel Decorative', serif;
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-script: 'Great Vibes', cursive;
+  --color-brand-50: #fdf6ec;
+  --color-brand-100: #f8e7c9;
+  --color-brand-400: #d4a437;
+  --color-brand-500: #b8862a;
+  --color-brand-600: #93661c;
+  --color-wine-700: #7a1426;
+  --color-wine-800: #5a0f1f;
+  --color-wine-900: #3b0a14;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #faf7f2;
+  color: #1f1a17;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gold-shimmer {
+  background-size: 250% 100%;
+  animation: shimmer 6s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -150% 0; }
+}
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 90s linear infinite; }
+.spin-slower { animation: spin-slow 160s linear infinite reverse; }
+
+@keyframes float-y { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.float-y { animation: float-y 4s ease-in-out infinite; }
+
+@keyframes glow-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(246,226,122,.55); } 50% { box-shadow: 0 0 0 14px rgba(246,226,122,0); } }
+.glow-pulse { animation: glow-pulse 2.2s ease-out infinite; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+.paper-texture {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.6), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(0,0,0,.03), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,.012) 0 2px, transparent 2px 6px);
+}
+
+/* admin form controls */
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e7dfd3;
+  background: #fff;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus { border-color: #d4a437; box-shadow: 0 0 0 3px rgba(212,164,55,.18); }
+textarea.input { resize: vertical; min-height: 5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gold-shimmer, .spin-slow, .spin-slower, .float-y, .glow-pulse { animation: none; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+}
