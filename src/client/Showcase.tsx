@@ -212,7 +212,7 @@ export function DemoView({ demoKey, profile }: { demoKey: string; profile: Busin
         <a href={`#/order${q}`} className="rounded-full bg-[linear-gradient(100deg,#d4a437,#f6e27a)] px-3 py-1.5 font-semibold text-wine-900">Get yours</a>
       </div>
       <div className="relative min-h-0 flex-1" style={{ transform: 'translateZ(0)' }}>
-        <Experience data={data} embedded link={location.href} />
+        <Experience key={demoKey} data={data} embedded backdrop link={location.href} />
       </div>
     </div>
   );

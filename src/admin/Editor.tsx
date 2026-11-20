@@ -6,13 +6,13 @@ import { getState, newInvitation, saveInvitation, useStore } from '../lib/store'
 import { go } from '../lib/router';
 import { compressImage, LINK_PORTRAIT } from '../lib/media';
 import { BLESSINGS, studioMessages } from '../lib/messages';
-import { encodeInvite, fitPublic, kb, toPublic, uid, WA_LIMIT } from '../lib/util';
+import { encodeInvite, fitPublic, kb, linkSlug, toPublic, uid, WA_LIMIT } from '../lib/util';
 import { hostingReady, uploadPhoto } from '../lib/hosting';
 import type { Settings } from '../types';
 import { Experience } from '../guest/Experience';
 import { Btn, Card, cx, Field, PageHeader, PhoneFrame, toast, Toggle } from './ui';
 
-const TABS = ['Occasion', 'People', 'Date & Venue', 'Message', 'Experience', 'Client'] as const;
+const TABS = ['Occasion', 'People', 'Date & Venue', 'Message', 'Story & Family', 'Experience', 'Client'] as const;
 type Tab = (typeof TABS)[number];
 
 export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
@@ -283,6 +283,8 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
               </div>
             )}
 
+            {tab === 'Story & Family' && <StoryFamilyTab inv={inv} up={up} />}
+
             {tab === 'Client' && (
               <div className="space-y-5">
                 <Field label="Client">
@@ -339,6 +341,8 @@ function PersonEditor({ label, p, onChange, parentsHint, settings }: { label: st
             <Field label="Parents / relation"><input className="input" value={p.parents || ''} onChange={(e) => onChange({ parents: e.target.value })} placeholder={parentsHint} /></Field>
             <Field label="Family surname / native"><input className="input" value={p.family || ''} onChange={(e) => onChange({ family: e.target.value })} placeholder="Kommineni family" /></Field>
           </div>
+          <Field label="Grandparents line (optional)"><input className="input" value={p.grand || ''} onChange={(e) => onChange({ grand: e.target.value })} placeholder="Granddaughter of Late Sri … & Smt. …" /></Field>
+          <Field label="About (optional — shows in “Meet the Couple”)"><textarea className="input" rows={2} value={p.bio || ''} onChange={(e) => onChange({ bio: e.target.value })} placeholder="Creative, adventurous and always ready for a new experience…" /></Field>
         </div>
       </div>
     </div>
@@ -386,12 +390,21 @@ function PhotoInput({ value, onChange, settings }: { value?: string; onChange: (
 
 function EventRow({ e, onChange, onRemove }: { e: EventItem; onChange: (p: Partial<EventItem>) => void; onRemove: () => void }) {
   return (
-    <div className="grid gap-2 rounded-xl border border-stone-200 p-3 sm:grid-cols-[1.4fr_1fr_.8fr_1.2fr_auto]">
-      <input className="input" value={e.title} onChange={(x) => onChange({ title: x.target.value })} placeholder="Event name" />
-      <input type="date" className="input" value={e.date} onChange={(x) => onChange({ date: x.target.value })} />
-      <input type="time" className="input" value={e.time} onChange={(x) => onChange({ time: x.target.value })} />
-      <input className="input" value={e.venue || ''} onChange={(x) => onChange({ venue: x.target.value })} placeholder="Venue" />
-      <Btn variant="ghost" onClick={onRemove} aria-label="Remove"><Trash2 className="h-4 w-4 text-red-500" /></Btn>
+    <div className="space-y-2 rounded-xl border border-stone-200 p-3">
+      <div className="flex gap-2">
+        <input className="input" value={e.title} onChange={(x) => onChange({ title: x.target.value })} placeholder="Event name (e.g. Sangeet)" />
+        <Btn variant="ghost" onClick={onRemove} aria-label="Remove"><Trash2 className="h-4 w-4 text-red-500" /></Btn>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <input type="date" className="input" value={e.date} onChange={(x) => onChange({ date: x.target.value })} aria-label="Date" />
+        <input type="time" className="input" value={e.time} onChange={(x) => onChange({ time: x.target.value })} aria-label="Start time" />
+        <input type="time" className="input" value={e.endTime || ''} onChange={(x) => onChange({ endTime: x.target.value })} aria-label="End time (optional)" title="End time (optional)" />
+      </div>
+      <input className="input" value={e.venue || ''} onChange={(x) => onChange({ venue: x.target.value })} placeholder="Venue (tap opens Google Maps for guests)" />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input className="input" value={e.note || ''} onChange={(x) => onChange({ note: x.target.value })} placeholder="Short description (A night of song & dance)" />
+        <input className="input" value={e.dress || ''} onChange={(x) => onChange({ dress: x.target.value })} placeholder="Dress code (optional)" />
+      </div>
     </div>
   );
 }
@@ -421,5 +434,103 @@ function GalleryEditor({ gallery, onChange, settings }: { gallery: string[]; onC
         e.target.value = '';
       }} />
     </Field>
+  );
+}
+
+const STORY_IDEAS = [
+  { emoji: '💌', title: 'Where it all began', text: 'A simple message started a story we never saw coming.' },
+  { emoji: '❤️', title: 'Falling in love', text: 'Friendship slowly turned into love, and moments into memories.' },
+  { emoji: '💍', title: 'The proposal', text: 'One question, one answer — and a lifetime of yes.' },
+  { emoji: '🌸', title: 'Our forever', text: 'Through every high and low we chose each other. Now we begin our forever.' },
+];
+
+function StoryFamilyTab({ inv, up }: { inv: Invitation; up: (p: Partial<Invitation>) => void }) {
+  const story = inv.story || [];
+  const families = inv.families || [];
+  const wishes = inv.wishes || [];
+  const ev = EVENTS[inv.type];
+  const setStory = (i: number, p: Partial<NonNullable<Invitation['story']>[number]>) => up({ story: story.map((x, k) => (k === i ? { ...x, ...p } : x)) });
+  const setFam = (i: number, p: Partial<NonNullable<Invitation['families']>[number]>) => up({ families: families.map((x, k) => (k === i ? { ...x, ...p } : x)) });
+  const setWish = (i: number, p: Partial<NonNullable<Invitation['wishes']>[number]>) => up({ wishes: wishes.map((x, k) => (k === i ? { ...x, ...p } : x)) });
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Our story timeline</p>
+          <Btn size="sm" onClick={() => up({ story: [...story, { id: uid(), emoji: '❤️', title: '', text: '' }] })}><Plus className="h-3.5 w-3.5" /> Add moment</Btn>
+        </div>
+        {story.length === 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {STORY_IDEAS.map((s) => (
+              <button key={s.title} type="button" onClick={() => up({ story: [...story, { id: uid(), ...s }] })} className="rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-600 hover:bg-brand-100">+ {s.emoji} {s.title}</button>
+            ))}
+            <button type="button" onClick={() => up({ story: STORY_IDEAS.map((s) => ({ id: uid(), ...s })) })} className="rounded-full bg-wine-800 px-3 py-1 text-xs text-white">Use all 4</button>
+          </div>
+        )}
+        <div className="space-y-2">
+          {story.map((st, i) => (
+            <div key={st.id} className="space-y-2 rounded-xl border border-stone-200 p-3">
+              <div className="flex gap-2">
+                <input className="input !w-16 text-center" value={st.emoji} onChange={(e) => setStory(i, { emoji: e.target.value })} aria-label="Emoji" />
+                <input className="input" value={st.title} onChange={(e) => setStory(i, { title: e.target.value })} placeholder="Title" />
+                <input className="input !w-32" value={st.when || ''} onChange={(e) => setStory(i, { when: e.target.value })} placeholder="When" />
+                <Btn variant="ghost" onClick={() => up({ story: story.filter((_, k) => k !== i) })} aria-label="Remove"><Trash2 className="h-4 w-4 text-red-500" /></Btn>
+              </div>
+              <textarea className="input" rows={2} value={st.text} onChange={(e) => setStory(i, { text: e.target.value })} placeholder="A line or two about this moment" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-stone-100 pt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Families (“awaiting your gracious presence”)</p>
+          <Btn size="sm" onClick={() => up({ families: [...families, { id: uid(), title: 'With Love', members: '' }] })}><Plus className="h-3.5 w-3.5" /> Add family</Btn>
+        </div>
+        {families.length === 0 && (
+          <button type="button" onClick={() => up({ families: ev.twoHosts ? [{ id: uid(), title: `${ev.hostBLabel}'s Family`, members: '' }, { id: uid(), title: `${ev.hostALabel}'s Family`, members: '' }] : [{ id: uid(), title: 'With Love', members: '' }] })} className="rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-600 hover:bg-brand-100">
+            + {ev.twoHosts ? `${ev.hostALabel}'s & ${ev.hostBLabel}'s families` : 'Family'}
+          </button>
+        )}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {families.map((f, i) => (
+            <div key={f.id} className="space-y-2 rounded-xl border border-stone-200 p-3">
+              <div className="flex gap-2">
+                <input className="input" value={f.title} onChange={(e) => setFam(i, { title: e.target.value })} placeholder="Groom's Family" />
+                <Btn variant="ghost" onClick={() => up({ families: families.filter((_, k) => k !== i) })} aria-label="Remove"><Trash2 className="h-4 w-4 text-red-500" /></Btn>
+              </div>
+              <textarea className="input" rows={4} value={f.members} onChange={(e) => setFam(i, { members: e.target.value })} placeholder={'Mr. Ashok Goudar\nMrs. Jayashree Ashok\n(one name per line)'} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-stone-100 pt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Wishes wall</p>
+          <Btn size="sm" onClick={() => up({ wishes: [...wishes, { id: uid(), name: '', text: '' }] })}><Plus className="h-3.5 w-3.5" /> Add wish</Btn>
+        </div>
+        <p className="mb-2 text-xs text-stone-400">Paste lovely wishes received on WhatsApp — they appear as a swipeable wall on the invitation.</p>
+        <div className="space-y-2">
+          {wishes.map((w, i) => (
+            <div key={w.id} className="space-y-2 rounded-xl border border-stone-200 p-3">
+              <div className="flex gap-2">
+                <input className="input" value={w.name} onChange={(e) => setWish(i, { name: e.target.value })} placeholder="From (e.g. Uncle Ramesh)" />
+                <Btn variant="ghost" onClick={() => up({ wishes: wishes.filter((_, k) => k !== i) })} aria-label="Remove"><Trash2 className="h-4 w-4 text-red-500" /></Btn>
+              </div>
+              <textarea className="input" rows={2} value={w.text} onChange={(e) => setWish(i, { text: e.target.value })} placeholder="Wishing you a lifetime of love…" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3 border-t border-stone-100 pt-6">
+        <Toggle label="Scratch card to reveal the date (fun surprise)" checked={!!inv.scratchReveal} onChange={(v) => up({ scratchReveal: v })} />
+        <Field label="Link name (for short links)" hint={`Guests get …/invitecraft/#/v/${linkSlug(inv)} — letters, numbers and dashes.`}>
+          <input className="input" value={inv.slug || ''} onChange={(e) => up({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-') })} placeholder={linkSlug({ ...inv, slug: '' })} />
+        </Field>
+      </div>
+    </div>
   );
 }

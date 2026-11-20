@@ -9,7 +9,7 @@ import { go } from '../lib/router';
 import { EVENTS } from '../lib/themes';
 import { whatsappMessage } from '../lib/messages';
 import { posterPdf, posterPng } from '../lib/poster';
-import { inviteSig, isPublished, fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
+import { inviteSig, isPublished, linkSlug, fitPublic, copyText, displayNames, downloadDataUrl, fmtDate, inviteLink, isLocalUrl, kb, slug, toPublic, uid, waLink, baseUrl, WA_LIMIT } from '../lib/util';
 import { hostAllPhotos, hostingReady, publishInvite } from '../lib/hosting';
 import { shrinkDataUrl } from '../lib/media';
 import { Experience } from '../guest/Experience';
@@ -38,8 +38,13 @@ export function SharePage({ id }: { id: string }) {
     setBusy('publish');
     try {
       const next = await hostAllPhotos(inv, settings);
-      await publishInvite(next.id, toPublic(next, settings), settings);
-      await saveInvitation({ ...next, publishedSig: inviteSig(next, settings) });
+      const want = linkSlug(next);
+      let path = next.publishedPath?.startsWith(want) ? next.publishedPath : want; // follows link-name changes
+      if ((await publishInvite(path, toPublic(next, settings), settings)) === 'taken') {
+        path = `${linkSlug(next)}-${next.id.slice(0, 4)}`; // same names as another client
+        await publishInvite(path, toPublic(next, settings), settings);
+      }
+      await saveInvitation({ ...next, publishedPath: path, publishedSig: inviteSig(next, settings) });
       toast('Short link ready ✓');
     } catch (e: any) {
       toast(`Could not publish: ${e.message}`);

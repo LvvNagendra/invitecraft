@@ -1,5 +1,7 @@
 import type { Invitation, Package } from '../types';
 
+const NL = String.fromCharCode(10);
+
 export function plusDays(n: number) {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -38,8 +40,8 @@ export function demos(): Demo[] {
       cover: 'demo/couple1.jpg',
       inv: {
         type: 'wedding', theme: 'royal', lang: 'en',
-        hostA: { name: 'Priya', photo: 'demo/bride.jpg', parents: 'D/o Sri Venkat Rao & Smt. Lakshmi', family: 'Kommineni' },
-        hostB: { name: 'Rahul', photo: 'demo/groom.jpg', parents: 'S/o Sri Suresh Sharma & Smt. Anitha', family: 'Sharma' },
+        hostA: { name: 'Priya', photo: 'demo/bride.jpg', parents: 'D/o Sri Venkat Rao & Smt. Lakshmi', family: 'Kommineni', grand: 'Granddaughter of Late Sri Ramaiah & Smt. Seethamma', bio: 'The creative soul of the duo — loves Carnatic music, sketching and long drives.' },
+        hostB: { name: 'Rahul', photo: 'demo/groom.jpg', parents: 'S/o Sri Suresh Sharma & Smt. Anitha', family: 'Sharma', bio: 'Software engineer, cricket fan and the planner — always with a plan and a backup plan.' },
         blessing: '|| Sri Venkateswara Prasanna ||',
         headline: 'Together with their families',
         message: 'With the divine blessings of the Almighty and our elders, we cordially invite you and your family to grace the auspicious occasion of the marriage of our beloved children. Your gracious presence and heartfelt blessings will make this day complete.',
@@ -49,11 +51,26 @@ export function demos(): Demo[] {
         hostPhone: '9876543210', dressCode: 'Traditional Indian attire', hashtag: '#PriyaWedsRahul',
         gallery: ['demo/couple1.jpg', 'demo/couple2.jpg', 'demo/couple3.jpg'],
         events: [
-          { id: 'e1', title: 'Haldi & Mehendi', date: plusDays(24), time: '16:00', venue: 'Bride’s Residence' },
-          { id: 'e2', title: 'Sangeet Night', date: plusDays(25), time: '19:00', venue: 'Sri Convention Hall' },
-          { id: 'e3', title: 'Wedding (Muhurtham)', date: plusDays(26), time: '10:30', venue: 'Sri Convention Hall' },
-          { id: 'e4', title: 'Reception', date: plusDays(26), time: '19:30', venue: 'Sri Convention Hall' },
+          { id: 'e1', title: 'Haldi & Mehendi', date: plusDays(24), time: '16:00', venue: 'Bride’s Residence, Jubilee Hills', note: 'An afternoon of turmeric, henna and laughter', dress: 'Yellow & green' },
+          { id: 'e2', title: 'Sangeet Night', date: plusDays(25), time: '19:00', endTime: '23:00', venue: 'Sri Convention Hall, Banjara Hills', note: 'A spirited night of song, dance and dhol', dress: 'Indo-western' },
+          { id: 'e3', title: 'Wedding (Muhurtham)', date: plusDays(26), time: '10:30', venue: 'Sri Convention Hall, Banjara Hills', note: 'The sacred seven vows under the floral mandap', dress: 'Traditional' },
+          { id: 'e4', title: 'Reception', date: plusDays(26), time: '19:30', venue: 'Sri Convention Hall, Banjara Hills', note: 'Dinner, music and blessings for the newlyweds' },
         ],
+        story: [
+          { id: 's1', emoji: '💌', title: 'Where it all began', when: '2019', text: 'A college fest, one shared umbrella and a conversation that never ended.' },
+          { id: 's2', emoji: '☕', title: 'Best friends first', when: '2020', text: 'Endless chai, late-night calls and dreams shared across two cities.' },
+          { id: 's3', emoji: '💍', title: 'The proposal', when: '2025', text: 'On the steps of Golconda at sunset, he asked — and she said yes!' },
+          { id: 's4', emoji: '🌸', title: 'Our forever', text: 'With our families’ blessings, we now begin our forever.' },
+        ],
+        families: [
+          { id: 'f1', title: 'Bride’s Family', members: ['Sri Venkat Rao Kommineni', 'Smt. Lakshmi Kommineni'].join(NL) },
+          { id: 'f2', title: 'Groom’s Family', members: ['Sri Suresh Sharma', 'Smt. Anitha Sharma'].join(NL) },
+        ],
+        wishes: [
+          { id: 'w1', name: 'Uncle Ramesh', text: 'Wishing you both a lifetime of love, laughter and togetherness. God bless!' },
+          { id: 'w2', name: 'Kavya (best friend)', text: 'From college friends to forever — so happy for you two! ❤️' },
+        ],
+        scratchReveal: true,
         rsvpEnabled: true, rsvpBy: plusDays(18), effects: true, music: 'melody',
       },
     },
@@ -103,11 +120,11 @@ export function demos(): Demo[] {
     },
     {
       key: 'engagement',
-      title: 'Blush Engagement',
-      blurb: 'Ivory blush · hearts · ring ceremony',
+      title: 'Sage Garden Engagement',
+      blurb: 'Light pastel · hearts · scratch card',
       cover: 'demo/couple2.jpg',
       inv: {
-        type: 'engagement', theme: 'blush', lang: 'en',
+        type: 'engagement', theme: 'sage', lang: 'en',
         hostA: { name: 'Ananya', photo: 'demo/bride.jpg', parents: 'D/o Sri Mohan & Smt. Kavitha' },
         hostB: { name: 'Vikram', photo: 'demo/groom.jpg', parents: 'S/o Sri Prakash & Smt. Radha' },
         blessing: '|| Sri Ganeshaya Namaha ||', headline: 'Together with their families',
@@ -116,7 +133,11 @@ export function demos(): Demo[] {
         date: plusDays(40), time: '19:00', timeLabel: 'Time',
         venueName: 'Taj Krishna', venueAddress: 'Banjara Hills, Hyderabad',
         hostPhone: '9876543210', gallery: ['demo/couple2.jpg', 'demo/couple3.jpg'],
-        events: [], rsvpEnabled: true, effects: true, music: 'melody',
+        events: [
+          { id: 'g1', title: 'Ring Ceremony', date: plusDays(40), time: '19:00', note: 'Exchange of rings and blessings' },
+          { id: 'g2', title: 'Dinner', date: plusDays(40), time: '20:30', note: 'Good food, music and celebrations' },
+        ],
+        scratchReveal: true, rsvpEnabled: true, effects: true, music: 'melody',
       },
     },
   ];

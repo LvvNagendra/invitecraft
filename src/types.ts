@@ -8,7 +8,7 @@ export type EventType =
 
 export type Lang = 'en' | 'te' | 'hi';
 
-export type ThemeId = 'royal' | 'temple' | 'blush' | 'emerald' | 'midnight' | 'peacock';
+export type ThemeId = 'royal' | 'temple' | 'blush' | 'emerald' | 'midnight' | 'peacock' | 'sage' | 'ivory';
 
 export type MusicMode = 'melody' | 'custom' | 'none';
 
@@ -17,6 +17,28 @@ export interface Person {
   photo?: string; // data URL or https URL
   parents?: string; // "S/o Sri Ramesh & Smt. Lakshmi"
   family?: string; // surname / native place
+  grand?: string; // "Granddaughter of Late Sri …"
+  bio?: string; // "Meet the couple" description
+}
+
+export interface StoryItem {
+  id: string;
+  emoji: string;
+  title: string;
+  text: string;
+  when?: string; // "2021", "March 2023"
+}
+
+export interface FamilyGroup {
+  id: string;
+  title: string; // "Bride's Family"
+  members: string; // one name per line
+}
+
+export interface Wish {
+  id: string;
+  name: string;
+  text: string;
 }
 
 export interface EventItem {
@@ -25,7 +47,9 @@ export interface EventItem {
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   venue?: string;
-  note?: string;
+  note?: string; // short description: "An evening of song and dance"
+  endTime?: string; // HH:mm
+  dress?: string; // per-event dress code
 }
 
 export interface Guest {
@@ -61,6 +85,11 @@ export interface Invitation {
 
   events: EventItem[];
   gallery: string[];
+  story?: StoryItem[]; // love story / journey timeline
+  families?: FamilyGroup[]; // "awaiting your gracious presence"
+  wishes?: Wish[]; // wishes wall (curated by the family)
+  scratchReveal?: boolean; // scratch card to reveal the date
+  slug?: string; // pretty short link: #/v/lilly-nagendra
 
   hostPhone: string; // WhatsApp number for RSVP and wishes
   dressCode?: string;
@@ -82,6 +111,7 @@ export interface Invitation {
   notes?: string;
   photoInLink: 'none' | 'couple' | 'all';
   publishedSig?: string; // fingerprint of the version published as a short link
+  publishedPath?: string; // the short link name it was published under
   createdAt: number;
   updatedAt: number;
 }
@@ -89,7 +119,7 @@ export interface Invitation {
 /** What actually travels inside the share link. */
 export type PublicInvitation = Omit<
   Invitation,
-  'clientId' | 'guests' | 'status' | 'price' | 'paid' | 'notes' | 'photoInLink' | 'publishedSig' | 'createdAt' | 'updatedAt'
+  'clientId' | 'guests' | 'status' | 'price' | 'paid' | 'notes' | 'photoInLink' | 'publishedSig' | 'publishedPath' | 'createdAt' | 'updatedAt'
 > & { brand?: string };
 
 export interface Client {

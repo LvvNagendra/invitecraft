@@ -13,6 +13,7 @@ export interface Theme {
   ink: string; // text on page background
   envelope: [string, string];
   seal: string;
+  onGold?: string; // text colour on gold buttons (defaults to bg1)
 }
 
 export const THEMES: Record<ThemeId, Theme> = {
@@ -52,7 +53,22 @@ export const THEMES: Record<ThemeId, Theme> = {
     gold: '#d1a94c', gold2: '#f3dd98', accent: '#7b3fa0', ink: '#eef7f3',
     envelope: ['#0d6a7a', '#06323b'], seal: '#6d2f91',
   },
+  sage: {
+    id: 'sage', name: 'Sage Garden (light)',
+    bg1: '#e3eadd', bg2: '#f8f5ec', card: '#fffdf7', cardInk: '#3b4d37',
+    gold: '#a8844e', gold2: '#8a6a32', accent: '#c25478', ink: '#34452f', onGold: '#ffffff',
+    envelope: ['#9db497', '#7b9475'], seal: '#b08d57',
+  },
+  ivory: {
+    id: 'ivory', name: 'Ivory Rose (light)',
+    bg1: '#f3e7da', bg2: '#fffaf3', card: '#ffffff', cardInk: '#6b1d2a',
+    gold: '#b0832b', gold2: '#8a5f1c', accent: '#b0304a', ink: '#5a1a24', onGold: '#ffffff',
+    envelope: ['#b0304a', '#7a1426'], seal: '#d8ad52',
+  },
 };
+
+/** Light themes need dark glass instead of white glass for panels. */
+export const isLight = (t: Theme) => ['sage', 'ivory'].includes(t.id);
 
 export type ParticleKind =
   | 'petal' | 'sparkle' | 'heart' | 'confetti' | 'balloon' | 'marigold' | 'diya' | 'star' | 'bubble';

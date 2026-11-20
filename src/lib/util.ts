@@ -45,7 +45,7 @@ export function initials(p?: Person) {
 /* ---------------- link encoding ---------------- */
 
 export function toPublic(inv: Invitation, settings?: Settings): PublicInvitation {
-  const { clientId, guests, status, price, paid, notes, photoInLink, createdAt, updatedAt, publishedSig, ...pub } = inv;
+  const { clientId, guests, status, price, paid, notes, photoInLink, createdAt, updatedAt, publishedSig, publishedPath, ...pub } = inv;
   const out: PublicInvitation = JSON.parse(JSON.stringify(pub));
   const isData = (s?: string) => !!s && s.startsWith('data:');
   if (photoInLink === 'none') {
@@ -116,6 +116,13 @@ export function fitPublic(inv: Invitation, settings?: Settings, budget = LINK_BU
 
 export const DEFAULT_REPO = 'LvvNagendra/invitecraft';
 
+/** Pretty name for short links: "lilly-nagendra" (or the custom link name set in the editor). */
+export function linkSlug(inv: Pick<Invitation, 'slug' | 'type' | 'hostA' | 'hostB'>) {
+  const base = (inv.slug || '').trim() || displayNames(inv as Invitation, '-');
+  const s = base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+  return s.length >= 3 ? s : `invite-${s || 'card'}`;
+}
+
 /** Fingerprint of the public data — tells whether the published short link is up to date. */
 export function inviteSig(inv: Invitation, settings?: Settings) {
   const t = JSON.stringify(toPublic(inv, settings));
@@ -133,7 +140,7 @@ export function inviteLink(inv: Invitation, settings: Settings, guestName?: stri
     if (guestName?.trim()) q.set('to', guestName.trim());
     if (settings.ghRepo && settings.ghRepo.trim() !== DEFAULT_REPO) q.set('r', settings.ghRepo.trim());
     const qs = q.toString();
-    return `${baseUrl(settings)}#/v/${inv.id}${qs ? `?${qs}` : ''}`;
+    return `${baseUrl(settings)}#/v/${inv.publishedPath || inv.id}${qs ? `?${qs}` : ''}`;
   }
   const pub = opts?.noPhotos ? toPublic({ ...inv, photoInLink: 'none' }, settings) : fitPublic(inv, settings);
   if (opts?.noPhotos) {

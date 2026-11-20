@@ -1,5 +1,7 @@
-import { CalendarDays, Images, LayoutDashboard, PenLine, Plus, Settings as Cog, Sparkles, Users } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { CalendarDays, Images, LayoutDashboard, LogOut, PenLine, Plus, Settings as Cog, Sparkles, Users } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { isLoggedIn, logout } from '../lib/auth';
+import { Login } from './Login';
 import { loadStore, useStore } from '../lib/store';
 import { go } from '../lib/router';
 import { cx, Toaster } from './ui';
@@ -25,6 +27,7 @@ const NAV = [
 export function AdminApp({ hash }: { hash: string }) {
   const ready = useStore((s) => s.ready);
   const settings = useStore((s) => s.settings);
+  const [authed, setAuthed] = useState(isLoggedIn());
   useEffect(() => { if (!ready) loadStore(); }, [ready]);
   useEffect(() => { document.title = `${settings.businessName} — Admin`; }, [settings.businessName]);
 
@@ -45,6 +48,8 @@ export function AdminApp({ hash }: { hash: string }) {
       case 'settings': page = <SettingsPage />; break;
       default: page = <Dashboard />;
     }
+
+  if (!authed) return <Login businessName={settings.businessName} onDone={() => setAuthed(true)} />;
 
   const active = (p: string) => (p === '/' ? !path : `/${path}` === p || (p === '/gallery' && (path === 'edit' || path === 'share')));
 
@@ -78,6 +83,9 @@ export function AdminApp({ hash }: { hash: string }) {
             ),
           )}
         </nav>
+        <button type="button" onClick={() => { logout(); setAuthed(false); }} className="relative mx-3 flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white">
+          <LogOut className="h-4 w-4" /> Sign out
+        </button>
         <div className="relative m-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
           <p className="font-medium text-white/80">Data stays on this device</p>
           <p className="mt-1">Back up regularly from Settings → Backup.</p>
@@ -91,7 +99,10 @@ export function AdminApp({ hash }: { hash: string }) {
             <img src="./favicon.svg" alt="" className="h-8 w-8" />
             <span className="font-display text-base font-semibold text-wine-900">{settings.businessName}</span>
           </button>
-          <button type="button" onClick={() => go('/settings')} className="rounded-full p-2 hover:bg-black/5" aria-label="Settings"><Cog className="h-5 w-5 text-stone-600" /></button>
+          <div className="flex items-center">
+            <button type="button" onClick={() => go('/settings')} className="rounded-full p-2 hover:bg-black/5" aria-label="Settings"><Cog className="h-5 w-5 text-stone-600" /></button>
+            <button type="button" onClick={() => { logout(); setAuthed(false); }} className="rounded-full p-2 hover:bg-black/5" aria-label="Sign out"><LogOut className="h-5 w-5 text-stone-600" /></button>
+          </div>
         </header>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">{page}</div>
       </main>

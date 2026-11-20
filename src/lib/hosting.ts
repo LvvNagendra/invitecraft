@@ -81,23 +81,33 @@ function utf8ToBase64(text: string) {
 }
 
 /** Stores the public invitation as invites/<id>.json on the media branch (creates or updates). */
-export async function publishInvite(id: string, pub: PublicInvitation, s: Settings) {
+export async function publishInvite(id: string, pub: PublicInvitation, s: Settings): Promise<'ok' | 'taken'> {
   const repo = s.ghRepo!.trim();
   const url = `https://api.github.com/repos/${repo}/contents/invites/${id}.json`;
   const existing = await fetch(`${url}?ref=${BRANCH}`, { headers: headers(s) });
   if (existing.status === 404) await ensureBranch(s).catch(() => {});
-  const sha = existing.ok ? (await existing.json()).sha : undefined;
+  let sha: string | undefined;
+  if (existing.ok) {
+    const j = await existing.json();
+    sha = j.sha;
+    // never overwrite another client's invitation that uses the same link name
+    try {
+      const other = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(j.content.replace(/\s/g, '')), (c) => c.charCodeAt(0))));
+      if (other.id && other.id !== pub.id) return 'taken';
+    } catch { /* unreadable — treat as ours */ }
+  }
   const r = await fetch(url, {
     method: 'PUT',
     headers: headers(s),
     body: JSON.stringify({ message: `Publish invitation ${id}`, content: utf8ToBase64(JSON.stringify(pub)), branch: BRANCH, ...(sha ? { sha } : {}) }),
   });
   if (!r.ok) throw new Error(r.status === 401 ? 'GitHub token is invalid or expired' : `Publish failed (${r.status})`);
+  return 'ok';
 }
 
 /** Loads a published invitation for the guest page. */
 export async function fetchPublished(id: string, repo = DEFAULT_REPO): Promise<PublicInvitation> {
-  if (!/^[a-z0-9-]{4,64}$/i.test(id) || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('bad link');
+  if (!/^[a-z0-9-]{2,80}$/i.test(id) || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('bad link');
   const r = await fetch(`https://raw.githubusercontent.com/${repo}/${BRANCH}/invites/${id}.json?t=${Date.now()}`, { cache: 'no-store' });
   if (!r.ok) throw new Error('not found');
   const p = await r.json();

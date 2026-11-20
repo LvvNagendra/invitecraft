@@ -112,7 +112,7 @@ export function Envelope({ theme, monogram, title, awaits, tapLabel, skipLabel, 
           animate={open ? { scale: 0, opacity: 0, rotate: 90 } : { scale: 1, opacity: 1 }}
           transition={{ duration: 0.4 }}
         >
-          <span className="font-script text-2xl leading-none" style={{ color: theme.gold2 }}>{monogram}</span>
+          <span className="font-script text-2xl leading-none" style={{ color: theme.onGold ? '#fff8e6' : theme.gold2 }}>{monogram}</span>
         </motion.div>
       </motion.button>
 

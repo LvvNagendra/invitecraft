@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { PublicInvitation } from '../types';
-import { EVENTS, LANG_FONT, T, THEMES, type Theme } from '../lib/themes';
+import { EVENTS, isLight, LANG_FONT, T, THEMES, type Theme } from '../lib/themes';
 import { displayNames, downloadBlob, eventDate, fmtDate, fmtTime, mapsLink, waLink } from '../lib/util';
 import { buildIcs, googleCalendarLink } from '../lib/media';
 import { MusicPlayer } from '../lib/music';
@@ -25,8 +25,8 @@ interface Ctx {
 const C = createContext<Ctx>(null as any);
 const useC = () => useContext(C);
 
-export function Experience({ data, guest, embedded, link, startAt }: {
-  data: PublicInvitation; guest?: string; embedded?: boolean; link?: string; startAt?: Stage;
+export function Experience({ data, guest, embedded, link, startAt, backdrop = !embedded }: {
+  data: PublicInvitation; guest?: string; embedded?: boolean; link?: string; startAt?: Stage; backdrop?: boolean;
 }) {
   const theme = THEMES[data.theme] || THEMES.royal;
   const ev = EVENTS[data.type] || EVENTS.wedding;
@@ -67,8 +67,15 @@ export function Experience({ data, guest, embedded, link, startAt }: {
       <div
         data-lang={data.lang}
         className={`relative overflow-hidden ${embedded ? 'h-full w-full' : 'h-[100dvh] w-full'}`}
-        style={{ background: `linear-gradient(170deg, ${theme.bg1} 0%, ${theme.bg2} 55%, ${theme.bg1} 100%)`, color: theme.ink, fontFamily: LANG_FONT[data.lang] }}
+        style={{ background: `linear-gradient(170deg, ${theme.bg1} 0%, ${theme.bg2} 55%, ${theme.bg1} 100%)`, color: theme.ink, fontFamily: LANG_FONT[data.lang], ['--glass' as any]: isLight(theme) ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.05)' }}
       >
+        {/* desktop: soft photo backdrop fills the wide screen around the invitation column */}
+        {stage === 'main' && data.gallery?.[0] && backdrop && (
+          <div className="pointer-events-none absolute inset-0 hidden md:block" aria-hidden>
+            <div className="absolute inset-0 scale-110 bg-cover bg-center opacity-40 blur-2xl" style={{ backgroundImage: `url("${data.gallery[0]}")` }} />
+            <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, transparent 0%, ${theme.bg1}cc 70%)` }} />
+          </div>
+        )}
         <Particles
           ref={fx}
           kinds={ev.particles}
@@ -189,7 +196,7 @@ function Welcome({ onDone }: { onDone: () => void }) {
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 2, type: 'spring', stiffness: 160, damping: 12 }}
             >
-              <Icon className="h-6 w-6" style={{ color: theme.bg1 }} fill={theme.bg1} />
+              <Icon className="h-6 w-6" style={{ color: theme.onGold || theme.bg1 }} fill={theme.bg1} />
             </motion.div>
             <motion.div initial={{ x: 140, opacity: 0, rotate: 12 }} animate={{ x: -14, opacity: 1, rotate: 0 }} transition={{ delay: 0.9, duration: 1.3, ease: [0.22, 1, 0.36, 1] }}>
               <Avatar person={inv.hostB} ring={theme.gold} size={118} />
@@ -276,7 +283,7 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
   const heroPhoto = inv.gallery?.[0];
 
   return (
-    <div className="relative mx-auto max-w-md pb-28">
+    <div className="relative mx-auto max-w-md pb-28 md:max-w-xl">
       {/* hero */}
       <section className="relative flex min-h-[100%] flex-col items-center justify-center overflow-hidden px-6 pb-16 pt-20 text-center" style={{ minHeight: '92vh' }}>
         {heroPhoto && (
@@ -285,7 +292,7 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
             initial={{ opacity: 0, scale: 1.15 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2.4, ease: 'easeOut' }}
-            style={{ backgroundImage: `linear-gradient(180deg, ${theme.bg1}e6 0%, ${theme.bg1}88 40%, ${theme.bg1}cc 75%, ${theme.bg1} 100%), url("${heroPhoto}")`, backgroundSize: 'cover', backgroundPosition: 'center 25%' }}
+            style={{ backgroundImage: isLight(theme) ? `linear-gradient(180deg, ${theme.bg2}f2 0%, ${theme.bg2}d0 40%, ${theme.bg2}e8 75%, ${theme.bg1} 100%), url("${heroPhoto}")` : `linear-gradient(180deg, ${theme.bg1}e6 0%, ${theme.bg1}88 40%, ${theme.bg1}cc 75%, ${theme.bg1} 100%), url("${heroPhoto}")`, backgroundSize: 'cover', backgroundPosition: 'center 25%' }}
           />
         )}
         <Mandala color={theme.gold} className="spin-slow pointer-events-none absolute left-1/2 top-[44%] w-[460px] -translate-x-1/2 -translate-y-1/2 opacity-[0.1]" />
@@ -322,6 +329,46 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
         </Reveal>
       </section>
 
+      {/* meet the couple */}
+      {(inv.hostA.bio || inv.hostB?.bio) && (
+        <section className="px-5 pt-20">
+          <SectionTitle>{inv.lang === 'te' ? 'మా గురించి' : inv.lang === 'hi' ? 'हमारे बारे में' : two ? 'Meet the Couple' : 'About'}</SectionTitle>
+          <div className="space-y-5">
+            {[inv.hostA, ...(two ? [inv.hostB!] : [])].filter((p) => p.bio).map((p, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div className={`flex items-center gap-4 rounded-3xl border p-4 ${i % 2 ? 'flex-row-reverse text-right' : ''}`} style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
+                  <Avatar person={p} ring={theme.gold} size={84} />
+                  <div className="min-w-0">
+                    <p className="font-script text-3xl leading-tight" style={{ color: theme.gold2 }}>{p.name}</p>
+                    <p className="mt-1 font-serif text-[15px] italic leading-snug opacity-90">“{p.bio}”</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* love story */}
+      {inv.story && inv.story.length > 0 && (
+        <section className="px-5 pt-20">
+          <SectionTitle>{inv.lang === 'te' ? 'మా ప్రేమ కథ' : inv.lang === 'hi' ? 'हमारी कहानी' : 'Our Story'}</SectionTitle>
+          <div className="relative">
+            <div className="absolute bottom-4 left-1/2 top-4 w-px -translate-x-1/2" style={{ background: `linear-gradient(${theme.gold}00, ${theme.gold}, ${theme.gold}00)` }} />
+            {inv.story.map((st, i) => (
+              <Reveal key={st.id} delay={i * 0.08} className={`relative mb-8 flex ${i % 2 ? 'justify-start' : 'justify-end'}`}>
+                <span className="absolute left-1/2 top-3 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full text-lg shadow-lg" style={{ background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})` }}>{st.emoji || '❤️'}</span>
+                <div className={`w-[calc(50%-28px)] rounded-2xl border p-3 ${i % 2 ? 'text-right' : ''}`} style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
+                  {st.when && <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">{st.when}</p>}
+                  <p className="font-display text-sm tracking-wide" style={{ color: theme.gold2 }}>{st.title}</p>
+                  <p className="mt-1 font-serif text-sm leading-snug opacity-90">{st.text}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* schedule */}
       {inv.events?.length > 0 && (
         <section className="px-5 pt-20">
@@ -330,14 +377,17 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
             {inv.events.map((e, i) => (
               <Reveal key={e.id} delay={i * 0.08} className="relative mb-6">
                 <span className="absolute -left-[33px] top-3 h-4 w-4 rotate-45 border-2" style={{ borderColor: theme.gold, background: theme.bg1 }} />
-                <div className="rounded-2xl border p-4 backdrop-blur-sm" style={{ borderColor: `${theme.gold}55`, background: '#ffffff0d' }}>
+                <div className="rounded-2xl border p-4 backdrop-blur-sm" style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
                   <p className="font-display text-base tracking-wider" style={{ color: theme.gold2 }}>{e.title}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-sm opacity-90">
                     <CalendarHeart className="h-3.5 w-3.5" /> {fmtDate(e.date, inv.lang, { weekday: 'short', day: 'numeric', month: 'short' })}
-                    {e.time && <><Clock className="ml-2 h-3.5 w-3.5" /> {fmtTime(e.time, inv.lang)}</>}
+                    {e.time && <><Clock className="ml-2 h-3.5 w-3.5" /> {fmtTime(e.time, inv.lang)}{e.endTime ? ` – ${fmtTime(e.endTime, inv.lang)}` : ''}</>}
                   </p>
-                  {e.venue && <p className="mt-1 flex items-center gap-1.5 text-sm opacity-75"><MapPin className="h-3.5 w-3.5" /> {e.venue}</p>}
-                  {e.note && <p className="mt-1 font-serif text-sm italic opacity-75">{e.note}</p>}
+                  {e.note && <p className="mt-1 font-serif text-[15px] italic opacity-85">{e.note}</p>}
+                  {e.venue && (
+                    <a href={mapsLink({ venueName: e.venue, venueAddress: '', mapUrl: '' })} target="_blank" rel="noreferrer" className="mt-1.5 flex items-center gap-1.5 text-sm opacity-80 underline-offset-2 hover:underline"><MapPin className="h-3.5 w-3.5" /> {e.venue}</a>
+                  )}
+                  {e.dress && <p className="mt-1 flex items-center gap-1.5 text-sm opacity-75"><Shirt className="h-3.5 w-3.5" /> {e.dress}</p>}
                 </div>
               </Reveal>
             ))}
@@ -347,6 +397,7 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
 
       {/* countdown */}
       <section className="px-5 pt-20">
+        {inv.scratchReveal && <Reveal className="mb-6"><ScratchDate onReveal={onFireworks} /></Reveal>}
         <Reveal><Countdown /></Reveal>
       </section>
 
@@ -358,11 +409,46 @@ function Main({ onReplay, onFireworks }: { onReplay: () => void; onFireworks: ()
         </section>
       )}
 
+      {/* families */}
+      {inv.families && inv.families.some((f) => f.members.trim()) && (
+        <section className="px-5 pt-20">
+          <SectionTitle>{inv.lang === 'te' ? 'ఆహ్వానించువారు' : inv.lang === 'hi' ? 'निवेदक' : 'With Love'}</SectionTitle>
+          <p className="-mt-3 mb-6 text-center font-serif text-base italic opacity-80">{inv.lang === 'te' ? 'మీ రాకకై ఎదురుచూస్తూ' : inv.lang === 'hi' ? 'आपके आगमन की प्रतीक्षा में' : 'Awaiting your gracious presence'}</p>
+          <div className={`grid gap-4 ${inv.families.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+            {inv.families.filter((f) => f.members.trim()).map((f, i) => (
+              <Reveal key={f.id} delay={i * 0.1}>
+                <div className="h-full rounded-3xl border p-5 text-center" style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
+                  <p className="font-display text-xs uppercase tracking-[0.3em]" style={{ color: theme.gold2 }}>{f.title}</p>
+                  <Divider color={theme.gold} className="mx-auto my-2 h-4 w-28" />
+                  {f.members.split(/\r?\n/).filter(Boolean).map((m, k) => <p key={k} className="font-serif text-[17px] leading-relaxed">{m}</p>)}
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* wishes wall */}
+      {inv.wishes && inv.wishes.length > 0 && (
+        <section className="pt-20">
+          <div className="px-5"><SectionTitle>{inv.lang === 'te' ? 'శుభాకాంక్షలు' : inv.lang === 'hi' ? 'शुभकामनाएं' : 'Wishes from Loved Ones'}</SectionTitle></div>
+          <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2">
+            {inv.wishes.map((w) => (
+              <div key={w.id} className="w-[78%] shrink-0 snap-center rounded-3xl border p-5 sm:w-[60%]" style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
+                <p className="font-serif text-3xl leading-none" style={{ color: theme.gold }}>“</p>
+                <p className="font-serif text-[15px] italic leading-relaxed opacity-90">{w.text}</p>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-widest" style={{ color: theme.gold2 }}>— {w.name}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* location & actions */}
       <section className="px-5 pt-20">
         <SectionTitle>{t.venue}</SectionTitle>
         <Reveal>
-          <div className="overflow-hidden rounded-3xl border" style={{ borderColor: `${theme.gold}66`, background: '#ffffff0d' }}>
+          <div className="overflow-hidden rounded-3xl border" style={{ borderColor: `${theme.gold}66`, background: 'var(--glass)' }}>
             {(inv.venueName || inv.venueAddress) && (
               <iframe
                 title="map"
@@ -444,7 +530,7 @@ function ActionBtn({ icon, label, href, onClick }: { icon: ReactNode; label: str
   const style = { borderColor: `${theme.gold}66`, background: `linear-gradient(160deg, #ffffff14, #ffffff05)` };
   const inner = (
     <>
-      <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.bg1 }}>{icon}</span>
+      <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.onGold || theme.bg1 }}>{icon}</span>
       {label}
     </>
   );
@@ -454,7 +540,7 @@ function ActionBtn({ icon, label, href, onClick }: { icon: ReactNode; label: str
 function DockBtn({ children, label, href, onClick, primary }: { children: ReactNode; label: string; href?: string; onClick?: () => void; primary?: boolean }) {
   const { theme } = useC();
   const cls = 'flex h-11 items-center gap-1.5 rounded-full px-4 text-xs font-medium';
-  const style = primary ? { background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.bg1 } : { color: theme.ink };
+  const style = primary ? { background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.onGold || theme.bg1 } : { color: theme.ink };
   return href ? (
     <a href={href} target="_blank" rel="noreferrer" className={cls} style={style} aria-label={label}>{children}{primary && <span>{label}</span>}</a>
   ) : (
@@ -490,11 +576,11 @@ export function InviteCard() {
           </div>
 
           <div className="mt-6">
-            <PersonBlock name={inv.hostA.name} parents={inv.hostA.parents} family={inv.hostA.family} />
+            <PersonBlock name={inv.hostA.name} parents={inv.hostA.parents} family={inv.hostA.family} grand={inv.hostA.grand} />
             {two && (
               <>
                 <p className="my-2 font-script text-3xl" style={{ color: theme.accent }}>{inv.type === 'wedding' ? 'weds' : '&'}</p>
-                <PersonBlock name={inv.hostB!.name} parents={inv.hostB!.parents} family={inv.hostB!.family} />
+                <PersonBlock name={inv.hostB!.name} parents={inv.hostB!.parents} family={inv.hostB!.family} grand={inv.hostB!.grand} />
               </>
             )}
             {inv.age && <p className="mt-1 font-display text-sm tracking-[0.25em]">{inv.age}</p>}
@@ -535,9 +621,10 @@ export function InviteCard() {
     </div>
   );
 
-  function PersonBlock({ name, parents, family }: { name: string; parents?: string; family?: string }) {
+  function PersonBlock({ name, parents, family, grand }: { name: string; parents?: string; family?: string; grand?: string }) {
     return (
       <div>
+        {grand && <p className="mb-1 font-serif text-[13px] italic opacity-70">{grand}</p>}
         <p className="font-script text-[2.6rem] leading-tight" style={{ color: ink }}>{name}</p>
         {family && <p className="font-display text-[11px] uppercase tracking-[0.3em]" style={{ color: theme.gold }}>{family}</p>}
         {parents && <p className="mt-1 font-serif text-[15px] italic opacity-80">{parents}</p>}
@@ -576,7 +663,7 @@ function Countdown() {
       ) : (
         <div className="mt-6 grid grid-cols-4 gap-2">
           {parts.map((p) => (
-            <div key={p.l} className="rounded-2xl border py-3" style={{ borderColor: `${theme.gold}55`, background: '#ffffff0d' }}>
+            <div key={p.l} className="rounded-2xl border py-3" style={{ borderColor: `${theme.gold}55`, background: 'var(--glass)' }}>
               <AnimatePresence mode="popLayout">
                 <motion.p key={p.v} initial={{ y: -14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 14, opacity: 0 }} className="font-display text-3xl font-semibold tabular-nums" style={{ color: theme.gold2 }}>
                   {String(p.v).padStart(2, '0')}
@@ -663,7 +750,7 @@ function Rsvp() {
 
   const field = 'w-full rounded-xl border bg-white/10 px-4 py-3 text-[15px] outline-none placeholder:opacity-60 focus:bg-white/15';
   return (
-    <div id="rsvp" className="rounded-[28px] border p-5" style={{ borderColor: `${theme.gold}66`, background: '#ffffff0d' }}>
+    <div id="rsvp" className="rounded-[28px] border p-5" style={{ borderColor: `${theme.gold}66`, background: 'var(--glass)' }}>
       <p className="text-center font-serif text-xl italic">{t.rsvp}</p>
       {inv.rsvpBy && <p className="mt-1 text-center text-xs opacity-70">{t.rsvpBy} {fmtDate(inv.rsvpBy, inv.lang, { day: 'numeric', month: 'long' })}</p>}
       <div className="mt-5 space-y-3">
@@ -675,7 +762,7 @@ function Rsvp() {
               key={String(v)}
               onClick={() => setGoing(v)}
               className="rounded-xl border px-3 py-3 text-sm font-medium transition"
-              style={going === v ? { background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.bg1, borderColor: theme.gold2 } : { borderColor: `${theme.gold}55` }}
+              style={going === v ? { background: `linear-gradient(135deg, ${theme.gold}, ${theme.gold2})`, color: theme.onGold || theme.bg1, borderColor: theme.gold2 } : { borderColor: `${theme.gold}55` }}
             >
               {v ? `🎉 ${t.yes}` : `🙏 ${t.no}`}
             </button>
@@ -733,5 +820,86 @@ function CalendarSheet({ onClose }: { onClose: () => void }) {
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* ---------------- scratch to reveal the date ---------------- */
+
+function ScratchDate({ onReveal }: { onReveal: () => void }) {
+  const { inv, theme, t } = useC();
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [done, setDone] = useState(false);
+  const drawing = useRef(false);
+
+  useEffect(() => {
+    const c = canvas.current!;
+    const r = c.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.max(1, r.width * dpr);
+    c.height = Math.max(1, r.height * dpr);
+    const ctx = c.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    const g = ctx.createLinearGradient(0, 0, r.width, r.height);
+    g.addColorStop(0, theme.gold);
+    g.addColorStop(0.5, '#f7e7a6');
+    g.addColorStop(1, theme.gold);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, r.width, r.height);
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.5})`;
+      ctx.fillRect(Math.random() * r.width, Math.random() * r.height, 2, 2);
+    }
+    ctx.fillStyle = 'rgba(70,40,5,.8)';
+    ctx.font = "600 13px 'Cinzel', serif";
+    ctx.textAlign = 'center';
+    ctx.fillText(inv.lang === 'te' ? '👆 గీకి చూడండి' : inv.lang === 'hi' ? '👆 खुरच कर देखें' : '👆 SCRATCH TO REVEAL', r.width / 2, r.height / 2 + 5);
+  }, []);
+
+  const scratch = (e: React.PointerEvent) => {
+    if (!drawing.current || done) return;
+    const c = canvas.current!;
+    const r = c.getBoundingClientRect();
+    const ctx = c.getContext('2d')!;
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(e.clientX - r.left, e.clientY - r.top, 22, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const check = () => {
+    drawing.current = false;
+    const c = canvas.current!;
+    const data = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let clear = 0;
+    let total = 0;
+    for (let i = 3; i < data.length; i += 64) {
+      total++;
+      if (data[i] === 0) clear++;
+    }
+    if (clear / total > 0.45) {
+      setDone(true);
+      onReveal();
+    }
+  };
+
+  return (
+    <div className="text-center">
+      <p className="mb-3 font-display text-xs uppercase tracking-[0.35em] opacity-80">{t.save}</p>
+      <div className="relative mx-auto h-28 max-w-xs overflow-hidden rounded-2xl border-2 shadow-xl" style={{ borderColor: theme.gold, background: theme.card, color: theme.cardInk }}>
+        <div className="flex h-full flex-col items-center justify-center">
+          <p className="font-script text-4xl" style={{ color: theme.accent }}>{fmtDate(inv.date, inv.lang, { day: 'numeric', month: 'long' })}</p>
+          <p className="font-display text-sm tracking-[0.3em]">{eventDate(inv.date).getFullYear()}</p>
+        </div>
+        <canvas
+          ref={canvas}
+          className="absolute inset-0 h-full w-full cursor-pointer touch-none transition-opacity duration-700"
+          style={{ opacity: done ? 0 : 1, pointerEvents: done ? 'none' : 'auto' }}
+          onPointerDown={(e) => { drawing.current = true; scratch(e); }}
+          onPointerMove={scratch}
+          onPointerUp={check}
+          onPointerLeave={() => drawing.current && check()}
+        />
+      </div>
+      {!done && <button type="button" onClick={() => { setDone(true); onReveal(); }} className="mt-2 text-[11px] underline opacity-60">{t.skip}</button>}
+    </div>
   );
 }
