@@ -42,16 +42,16 @@ function ShortPage({ hash }: { hash: string }) {
   const [path, query] = hash.slice(3).split('?');
   const params = new URLSearchParams(query || '');
   const guest = params.get('to') || undefined;
-  const [state, setState] = useState<{ inv?: PublicInvitation; error?: boolean }>({});
+  const [state, setState] = useState<{ inv?: PublicInvitation; error?: 'missing' | 'network' }>({});
   useEffect(() => {
     fetchPublished(path, params.get('r') || undefined)
       .then((inv) => {
         setState({ inv });
         document.title = `💌 ${inv.hostA.name}${inv.hostB?.name ? ' & ' + inv.hostB.name : ''} — Invitation`;
       })
-      .catch(() => setState({ error: true }));
+      .catch((e) => setState({ error: e?.message === 'not found' || e?.message === 'bad link' ? 'missing' : 'network' }));
   }, [path]);
-  if (state.error) return <NotFound />;
+  if (state.error) return <NotFound missing={state.error === 'missing'} />;
   if (!state.inv) return <Loading />;
   return <Experience data={state.inv} guest={guest} link={location.href} />;
 }
@@ -65,11 +65,15 @@ function Loading() {
   );
 }
 
-function NotFound() {
+function NotFound({ missing }: { missing?: boolean }) {
   return (
     <div className="flex h-full flex-col items-center justify-center bg-[#2a0610] p-8 text-center text-[#fff3d6]">
-      <p className="font-script text-5xl text-[#f6e27a]">Oops!</p>
-      <p className="mt-4 max-w-xs font-serif text-lg">We couldn’t load this invitation. Please check your internet connection and try again.</p>
+      <p className="font-script text-5xl text-[#f6e27a]">{missing ? 'Coming soon!' : 'Oops!'}</p>
+      <p className="mt-4 max-w-xs font-serif text-lg">
+        {missing
+          ? 'This invitation link isn’t ready yet. Please ask the family to send the link again in a little while.'
+          : 'We couldn’t load this invitation. Please check your internet connection and try again.'}
+      </p>
       <button type="button" onClick={() => location.reload()} className="mt-6 rounded-full bg-[#f6e27a] px-6 py-2.5 text-sm font-semibold text-[#3b0a14]">Try again</button>
     </div>
   );
