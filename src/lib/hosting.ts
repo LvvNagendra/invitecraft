@@ -93,7 +93,7 @@ export async function publishInvite(id: string, pub: PublicInvitation, s: Settin
     // never overwrite another client's invitation that uses the same link name
     try {
       const other = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(j.content.replace(/\s/g, '')), (c) => c.charCodeAt(0))));
-      if (other.id && other.id !== pub.id) return 'taken';
+      if (other.id && other.id !== pub.id && !other.claimable) return 'taken'; // 'claimable' = published for you by the designer
     } catch { /* unreadable — treat as ours */ }
   }
   const r = await fetch(url, {
