@@ -600,7 +600,7 @@ export function InviteCard() {
               <p className="font-display text-[11px] tracking-widest opacity-70">{eventDate(inv.date).getFullYear()}</p>
             </div>
             <div className="border-y py-2 font-display text-xs uppercase tracking-[0.2em]" style={{ borderColor: `${theme.gold}aa` }}>
-              {fmtTime(inv.time, inv.lang)}
+              {inv.time ? fmtTime(inv.time, inv.lang) : inv.lang === 'te' ? 'సమయం త్వరలో' : inv.lang === 'hi' ? 'समय जल्द' : 'Time TBC'}
             </div>
           </div>
           {inv.time && <p className="mt-3 font-serif text-sm italic opacity-80">{inv.timeLabel}: {fmtTime(inv.time, inv.lang)}</p>}
