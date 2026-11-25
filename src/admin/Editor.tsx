@@ -266,7 +266,7 @@ export function Editor({ id, newType }: { id?: string; newType?: EventType }) {
                 </div>
                 <Field label="Background music">
                   <div className="flex flex-wrap gap-2">
-                    {([['melody', '🎵 Soft veena melody'], ['custom', '🔗 My music link'], ['none', '🔇 No music']] as const).map(([m, l]) => (
+                    {([['melody', '🎵 Soft veena melody'], ['love', '💞 Love theme (flute)'], ['custom', '🔗 My music link'], ['none', '🔇 No music']] as const).map(([m, l]) => (
                       <button key={m} type="button" onClick={() => up({ music: m })} className={cx('rounded-xl border px-4 py-2 text-sm', inv.music === m ? 'border-brand-500 bg-brand-50 font-semibold' : 'border-stone-200')}>{l}</button>
                     ))}
                   </div>

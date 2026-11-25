@@ -14,7 +14,7 @@ export class MusicPlayer {
   private droneNodes: OscillatorNode[] = [];
   playing = false;
 
-  constructor(private mode: 'melody' | 'custom' | 'none', private url?: string) {}
+  constructor(private mode: 'melody' | 'love' | 'custom' | 'none', private url?: string) {}
 
   start() {
     if (this.mode === 'none' || this.playing) return;
@@ -132,6 +132,7 @@ export class MusicPlayer {
   private scale = [0, 2, 4, 7, 9, 12, 14, 16];
 
   private schedule() {
+    if (this.mode === 'love') return this.scheduleLove();
     const ctx = this.ctx!;
     const beat = 0.42;
     while (this.nextTime < ctx.currentTime + 0.6) {
@@ -170,5 +171,80 @@ export class MusicPlayer {
     o2.start(t);
     o.stop(t + decay + 0.1);
     o2.stop(t + decay + 0.1);
+  }
+
+  /* ---------- "Love theme": slow romantic flute melody over soft string chords (original) ---------- */
+  private loveMelody: [number, number][] = [
+    [4, 1], [5, 1], [6, 2], [5, 1], [4, 1], [2, 2],
+    [2, 1], [4, 1], [5, 1.5], [4, 0.5], [2, 1], [1, 1], [0, 2],
+    [7, 1], [6, 1], [5, 1], [4, 1], [5, 2], [4, 1], [2, 1],
+    [1, 1], [2, 1], [4, 1.5], [2, 0.5], [1, 1], [0, 3], [-1, 1],
+  ];
+  private loveScale = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+  private loveChords = [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]]; // D, G, Bm, A
+  private beatPos = 0;
+
+  private scheduleLove() {
+    const ctx = this.ctx!;
+    const beat = 0.62;
+    while (this.nextTime < ctx.currentTime + 0.8) {
+      const [deg, len] = this.loveMelody[this.step % this.loveMelody.length];
+      if (deg >= 0) this.flute(293.66 * Math.pow(2, this.loveScale[deg] / 12), this.nextTime, len * beat);
+      // a soft string chord every 4 beats
+      const bar = Math.floor(this.beatPos / 4);
+      if (Math.floor((this.beatPos + len) / 4) !== bar || this.beatPos === 0) {
+        const chord = this.loveChords[(bar + (this.beatPos === 0 ? 0 : 1)) % this.loveChords.length];
+        chord.forEach((n) => this.pad(146.83 * Math.pow(2, n / 12), this.nextTime, beat * 4.2));
+      }
+      this.beatPos += len;
+      this.nextTime += len * beat;
+      this.step++;
+    }
+  }
+
+  private flute(freq: number, t: number, dur: number) {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq * 0.99, t);
+    o.frequency.exponentialRampToValueAtTime(freq, t + 0.12); // soft glide into the note
+    const vib = ctx.createOscillator();
+    vib.frequency.value = 5.2;
+    const vibGain = ctx.createGain();
+    vibGain.gain.setValueAtTime(0, t);
+    vibGain.gain.linearRampToValueAtTime(freq * 0.006, t + Math.min(0.4, dur * 0.6));
+    vib.connect(vibGain).connect(o.frequency);
+    const breath = ctx.createOscillator();
+    breath.type = 'triangle';
+    breath.frequency.value = freq * 2;
+    const bg = ctx.createGain();
+    bg.gain.value = 0.08;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.09);
+    g.gain.setValueAtTime(0.14, t + Math.max(0.1, dur - 0.15));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.35);
+    o.connect(g);
+    breath.connect(bg).connect(g);
+    g.connect(this.master!);
+    g.connect((this as any).fx);
+    [o, vib, breath].forEach((x) => { x.start(t); x.stop(t + dur + 0.45); });
+  }
+
+  private pad(freq: number, t: number, dur: number) {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.value = freq;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.018, t + 0.8);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp).connect(g).connect(this.master!);
+    o.start(t);
+    o.stop(t + dur + 0.1);
   }
 }

@@ -10,7 +10,7 @@ export type Lang = 'en' | 'te' | 'hi';
 
 export type ThemeId = 'royal' | 'temple' | 'blush' | 'emerald' | 'midnight' | 'peacock' | 'sage' | 'ivory';
 
-export type MusicMode = 'melody' | 'custom' | 'none';
+export type MusicMode = 'melody' | 'love' | 'custom' | 'none';
 
 export interface Person {
   name: string;
