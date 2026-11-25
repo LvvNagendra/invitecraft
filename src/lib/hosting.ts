@@ -108,9 +108,24 @@ export async function publishInvite(id: string, pub: PublicInvitation, s: Settin
 /** Loads a published invitation for the guest page. */
 export async function fetchPublished(id: string, repo = DEFAULT_REPO): Promise<PublicInvitation> {
   if (!/^[a-z0-9-]{2,80}$/i.test(id) || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('bad link');
-  const r = await fetch(`https://raw.githubusercontent.com/${repo}/${BRANCH}/invites/${id}.json?t=${Date.now()}`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('not found');
-  const p = await r.json();
+  // 1) GitHub API: always the latest version (raw files can be cached for up to 5 minutes)
+  // 2) raw file as a fallback (e.g. API rate limit on a shared wifi)
+  let p: any = null;
+  try {
+    const api = await fetch(`https://api.github.com/repos/${repo}/contents/invites/${id}.json?ref=${BRANCH}`, {
+      headers: { Accept: 'application/vnd.github.raw+json' },
+      cache: 'no-store',
+    });
+    if (api.ok) p = await api.json();
+    else if (api.status === 404) throw new Error('not found');
+  } catch (e: any) {
+    if (e?.message === 'not found') throw e;
+  }
+  if (!p) {
+    const r = await fetch(`https://raw.githubusercontent.com/${repo}/${BRANCH}/invites/${id}.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error('not found');
+    p = await r.json();
+  }
   return { events: [], gallery: [], rsvpEnabled: false, effects: true, music: 'melody', ...p, hostA: p.hostA || { name: '' } };
 }
 
